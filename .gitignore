@@ -1,7 +1,0 @@
-.project
-.pydevproject
-.settings
-.classpath
-.idea
-__pycache__
-target/
