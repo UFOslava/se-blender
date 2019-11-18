@@ -9,10 +9,11 @@ import re
 
 BAD_PATH = re.compile(r"^(?:[A-Za-z]:|\.\.)?[\\/]")
 
+
 def conv_se_content_dir(settings):
     conv_se_dir = bpy.path.abspath(bpy.context.user_preferences.addons['space_engineers'].preferences.seDir)
     if not conv_se_dir:
-        return settings.baseDir # fallback, if unset
+        return settings.baseDir  # fallback, if unset
     return os.path.join(os.path.normpath(conv_se_dir), "Content")
 
 
@@ -31,7 +32,7 @@ def derive_texture_path(settings, filepath):
 
     try:
         relative_to_basedir = os.path.relpath(image_path, settings.baseDir)
-        print("relbd: "+relative_to_basedir)
+        print("relbd: " + relative_to_basedir)
         if is_in_subpath(relative_to_basedir):
             return relative_to_basedir
     except ValueError:
@@ -39,12 +40,15 @@ def derive_texture_path(settings, filepath):
 
     return image_path
 
+
 def _floatstr(f):
     return str(round(f, 2))
+
 
 # fixes the misspelled constant in types.py without the need to update the value in existing .blend files
 def _material_technique(technique):
     return "ALPHA_MASKED" if "ALPHAMASK" == technique else technique
+
 
 def material_xml(settings, mat, file=None, node=None):
     d = data(mat)
@@ -56,10 +60,10 @@ def material_xml(settings, mat, file=None, node=None):
         se = ElementTree.SubElement(e, 'Parameter', Name=name)
         if value:
             se.text = value
-        
+
     for xmlreffile in settings.matreffiles:
         # if not TextureType.ColorMetal in m.images:
-        if not xmlreffile: #don't want it failing if we don't have a file assigned
+        if not xmlreffile:  # don't want it failing if we don't have a file assigned
             xmlreffile = None
 
         if not xmlreffile is None:
@@ -72,27 +76,29 @@ def material_xml(settings, mat, file=None, node=None):
                 if not refmattechnique is None:
                     technique_param = refmattechnique.text
                     break
-    
+
     if technique_param != "AUTO":
         technique_param = _material_technique(d.technique)
     elif matreffound is None:
         technique_param = "MESH"
-        
+
     if m.images.get(TextureType.ColorMetal, None):
         print(mat.name)
-        
-    if not matreffound == True or _material_technique(d.technique) != "AUTO" or m.images.get(TextureType.ColorMetal, None) or m.images.get(TextureType.NormalGloss, None) or m.images.get(TextureType.AddMaps, None) or m.images.get(TextureType.Alphamask, None):
+
+    if not matreffound == True or _material_technique(d.technique) != "AUTO" or m.images.get(TextureType.ColorMetal,
+                                                                                             None) or m.images.get(
+            TextureType.NormalGloss, None) or m.images.get(TextureType.AddMaps, None) or m.images.get(
+            TextureType.Alphamask, None):
         e = ElementTree.Element("Material", Name=mat.name)
-           
-        
+
         param("Technique", technique_param)
-        
+
         cmpath = None
         for texType in TextureType:
             filepath = m.images.get(texType, None)
             if texType.name == 'ColorMetal' and not filepath is None:
                 cmpath = filepath[:-6]
-            
+
             checked = None
             if texType.name == 'ColorMetal':
                 checked = 1
@@ -101,14 +107,13 @@ def material_xml(settings, mat, file=None, node=None):
             elif texType.name == 'AddMaps' and d.usetextureadd:
                 checked = 1
             elif texType.name == 'Alphamask' and d.usetexturealpha:
-                checked = 1 
-            
+                checked = 1
+
             if filepath is None:
-                for xmlreffile in settings.matreffiles: 
-                    if not xmlreffile:#don't want it failing if we don't have a file assigned
-                            xmlreffile = None
-                        
-                        
+                for xmlreffile in settings.matreffiles:
+                    if not xmlreffile:  # don't want it failing if we don't have a file assigned
+                        xmlreffile = None
+
                     if not xmlreffile is None:
                         texTypeS = (texType.name + "Texture")
                         xmlref = ElementTree.parse(xmlreffile).getroot()
@@ -121,15 +126,15 @@ def material_xml(settings, mat, file=None, node=None):
                             if not texType.name == 'ColorMetal' and not cmpath is None:
                                 textfilepath = None
                                 if texType.name == 'NormalGloss':
-                                    textfilepath =  (cmpath + "ng.dds")
+                                    textfilepath = (cmpath + "ng.dds")
                                 if texType.name == 'AddMaps':
-                                    textfilepath =  (cmpath + "add.dds")
+                                    textfilepath = (cmpath + "add.dds")
                                 if texType.name == 'Alphamask':
                                     if not technique_param == 'GLASS' and not technique_param == 'MESH':
-                                        textfilepath =  (cmpath + "alphamask.dds")
+                                        textfilepath = (cmpath + "alphamask.dds")
                                     else:
                                         textfilepath = None
-                                
+
                                 if not textfilepath is None:
                                     exists = Path(textfilepath)
                                     if exists.is_file():
@@ -139,10 +144,10 @@ def material_xml(settings, mat, file=None, node=None):
                                         filepath = None
                                 else:
                                     filepath = None
-                
+
             if not filepath is None and not technique_param == "GLASS":
                 derivedPath = derive_texture_path(settings, filepath)
-                #print("TexPath: "+derivedPath)
+                # print("TexPath: "+derivedPath)
                 if (BAD_PATH.search(derivedPath)):
                     settings.error("The %s texture of material '%s' exports with the non-portable path: '%s'. "
                                    "Consult the documentation on texture-paths."
@@ -160,7 +165,7 @@ def material_xml(settings, mat, file=None, node=None):
                     e.append(ElementTree.Comment("material has no %sTexture" % texType.name))
 
         return e
-    
+
 
 def materialref_xml(settings, matref, file=None, node=None):
     d = data(matref)
@@ -168,7 +173,7 @@ def materialref_xml(settings, matref, file=None, node=None):
     technique_param = _material_technique(d.technique)
     matreffound = None
     ismatref = True
-    
+
     if technique_param != "AUTO":
         ismatref = None
     if m.images.get(TextureType.ColorMetal, None):
@@ -179,10 +184,10 @@ def materialref_xml(settings, matref, file=None, node=None):
         ismatref = None
     if m.images.get(TextureType.Alphamask, None) and d.usetexturealpha:
         ismatref = None
-    
+
     if not ismatref is None:
         for xmlreffile in settings.matreffiles:
-            if not xmlreffile: #don't want it failing if we don't have a file assigned
+            if not xmlreffile:  # don't want it failing if we don't have a file assigned
                 xmlreffile = None
 
             if not xmlreffile is None:
@@ -191,15 +196,16 @@ def materialref_xml(settings, matref, file=None, node=None):
                 if not refmaterial is None:
                     matreffound = True
                     break
-        
+
         if not matreffound is None:
             e = ElementTree.Element("MaterialRef", Name=matref.name)
         else:
             e = ElementTree.Comment("material %s can't be found" % matref.name)
-        
+
         return e
 
-def lod_xml(settings, lodMwmFile: str, lodDistance: int, renderQualities:iter=None):
+
+def lod_xml(settings, lodMwmFile: str, lodDistance: int, renderQualities: iter = None):
     e = ElementTree.Element("LOD")
     attrib = OrderedDict()
     attrib['Distance'] = str(lodDistance)
@@ -215,7 +221,9 @@ def lod_xml(settings, lodMwmFile: str, lodDistance: int, renderQualities:iter=No
     em.text = filePath
     return e
 
-def mwmbuilder_xml(settings, material_elements, materialref_elements, lod_elements, rescale_factor: float = 1, rotation_y: float = 0):
+
+def mwmbuilder_xml(settings, material_elements, materialref_elements, lod_elements, rescale_factor: float = 1,
+                   rotation_y: float = 0):
     d = data(settings.scene)
     e = ElementTree.Element("Model", Name=settings.blockname)
 
@@ -233,7 +241,7 @@ def mwmbuilder_xml(settings, material_elements, materialref_elements, lod_elemen
     for mat in material_elements:
         if not mat is None:
             e.append(mat)
-    
+
     for matref in materialref_elements:
         if not matref is None:
             e.append(matref)

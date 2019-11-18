@@ -33,6 +33,7 @@ mirroring = OrderedDict([
     ('UnsupportedXZ4', (-90.0, -90.0, 0.0)),
 ])
 
+
 def eulerTo3x3(eulerXYZ):
     if eulerXYZ is None: return None
     rotMatrix = eulerXYZ.to_matrix()
@@ -42,8 +43,9 @@ def eulerTo3x3(eulerXYZ):
         rotMatrix.row[2].to_tuple(4),
     )
 
-enumToMatrix = { enum : eulerTo3x3(Euler((math.radians(a) for a in angles))) for enum, angles in mirroring.items() }
-matrixToEnum = { matrix : enum for enum, matrix in enumToMatrix.items() }
+
+enumToMatrix = {enum: eulerTo3x3(Euler((math.radians(a) for a in angles))) for enum, angles in mirroring.items()}
+matrixToEnum = {matrix: enum for enum, matrix in enumToMatrix.items()}
 
 RE_MIRROR = re.compile(
     r"^Mirror(?:ing)?("
@@ -54,14 +56,17 @@ RE_MIRROR = re.compile(
 
 Mirroring = namedtuple('Mirroring', ('axis', 'enum'))
 
+
 def mirroringAxisFromObjectName(ob) -> str:
     match = RE_MIRROR.search(ob.name)
     if not match:
         return None
     return 'X' if match.group(2) else 'Y' if match.group(3) else 'Z'
 
+
 def mirroringFromObject(ob) -> str:
     return matrixToEnum.get(eulerTo3x3(ob.rotation_euler), 'NonRectangular')
+
 
 # -------------------------------------------------------------------------------------------------------------------- #
 
@@ -71,10 +76,11 @@ mirroringUI = [
     if not enum.startswith("Unsupported")
 ]
 mirroringUI += [
-    ('Unsupported', 'Unsupported by SE', '', 'ERROR', len(mirroringUI)+0),
-    ('NonRectangular', 'Non-rectangular', '', 'ERROR', len(mirroringUI)+1),
+    ('Unsupported', 'Unsupported by SE', '', 'ERROR', len(mirroringUI) + 0),
+    ('NonRectangular', 'Non-rectangular', '', 'ERROR', len(mirroringUI) + 1),
 ]
-mirroringEnumToIndex = {ui[0] : ui[4] for ui in mirroringUI}
+mirroringEnumToIndex = {ui[0]: ui[4] for ui in mirroringUI}
+
 
 def setMirroringProp(self, value):
     enum = mirroringUI[value][0]
@@ -82,9 +88,11 @@ def setMirroringProp(self, value):
         return
     self.rotation_euler = Euler((math.radians(a) for a in mirroring[enum]))
 
+
 def getMirroringProp(self):
     enum = mirroringFromObject(self)
     return mirroringEnumToIndex[enum if not enum.startswith('Unsup') else 'Unsupported']
+
 
 # This property must be placed directly on bpy.types.Object because it is derived from Object.rotation_euler
 mirroringProperty = bpy.props.EnumProperty(
@@ -97,18 +105,19 @@ mirroringProperty = bpy.props.EnumProperty(
 )
 
 MIRRORS = {
-    'X' : ('MirrorLeftRight', Vector((-1, 0, 0))),
-    'Y' : ('MirrorTopBottom', Vector(( 0, 0, 1))),
-    'Z' : ('MirrorFrontBack', Vector(( 0, 1, 0))),
+    'X': ('MirrorLeftRight', Vector((-1, 0, 0))),
+    'Y': ('MirrorTopBottom', Vector((0, 0, 1))),
+    'Z': ('MirrorFrontBack', Vector((0, 1, 0))),
 }
 
-def setupMirrors(scene: bpy.types.Scene, mainObjects=[], blockSize=(1,1,1), isSmall=False, layer=-1):
+
+def setupMirrors(scene: bpy.types.Scene, mainObjects=[], blockSize=(1, 1, 1), isSmall=False, layer=-1):
     cubeSize = 0.5 if isSmall else 2.5
     maxBlockSize = max(blockSize) * cubeSize
     mirrorDistance = maxBlockSize + cubeSize
     mirrorLayer = layers(layer_bit(scene.active_layer if layer == -1 else layer))
 
-    mirrors = { 'X' : None, 'Y' : None, 'Z' : None }
+    mirrors = {'X': None, 'Y': None, 'Z': None}
 
     for ob in scene.objects:
         axis = mirroringAxisFromObjectName(ob)
@@ -123,19 +132,19 @@ def setupMirrors(scene: bpy.types.Scene, mainObjects=[], blockSize=(1,1,1), isSm
             scene.objects.link(mirror)
         mirror.empty_draw_size = cubeSize
         mirror.location = MIRRORS[axis][1] * mirrorDistance
-        mirror.layers = mirrorLayer # needs to be done after the object is in the scene
+        mirror.layers = mirrorLayer  # needs to be done after the object is in the scene
 
     # need these more than once but generators only evaluate once
     mainObjects = [o for o in mainObjects]
     mirrors = {m for m in mirrors.values()}
-    removed = set() # don't re-add old mesh copies
+    removed = set()  # don't re-add old mesh copies
 
     for mirror in mirrors:
         for c in mirror.children:
             try:
                 scene.objects.unlink(c)
             except RuntimeError:
-                pass # already removed from the scene
+                pass  # already removed from the scene
             c.parent = None
             removed.add(c)
 
@@ -146,6 +155,6 @@ def setupMirrors(scene: bpy.types.Scene, mainObjects=[], blockSize=(1,1,1), isSm
                 copy.parent = mirror
                 copy.hide_select = True
                 scene.objects.link(copy)
-                copy.layers = mirrorLayer # needs to be done after the object is in the scene
+                copy.layers = mirrorLayer  # needs to be done after the object is in the scene
 
     scene.update()

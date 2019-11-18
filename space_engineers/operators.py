@@ -13,7 +13,8 @@ from .mount_points import create_mount_point_skeleton
 from .pbr_node_group import getDx11Shader, createDx11ShaderGroup
 from .types import upgradeToNodeMaterial
 from .types import getExportNodeTreeFromContext, getExportNodeTree, data, sceneData, SEMaterialInfo
-from .nodes import BlockDefinitionNode, Exporter, BlockExportTree, getBlockDef, LayerObjectsNode, SeparateLayerObjectsNode, \
+from .nodes import BlockDefinitionNode, Exporter, BlockExportTree, getBlockDef, LayerObjectsNode, \
+    SeparateLayerObjectsNode, \
     getUsedMaterials
 from .utils import layers, layer_bits, layer_bit, PinnedScene, PinnedSettings
 from .default_nodes import createDefaultTree
@@ -25,116 +26,121 @@ class SteamOpen(bpy.types.Operator):
     bl_label = ""
 
     url = bpy.props.StringProperty(
-            name="URL",
-            description="Steam Link to open",
-            )
+        name="URL",
+        description="Steam Link to open",
+    )
 
     def execute(self, context):
         import webbrowser
         webbrowser.open(self.url)
         return {'FINISHED'}
-        
+
+
 class AutoSearchMwmBuilder(bpy.types.Operator):
     "Automatic search for actual MwmBuilder at common Steam paths"
     bl_idname = "autosearch.mwmbuilder"
     bl_label = ""
-    
+
     def invoke(self, context, event):
-        
+
         SteamSEPath = "steamapps\\common\\SpaceEngineers\\Tools\\MwmBuilder\\MwmBuilder.exe"
         SteamSESDKPath = "steamapps\\common\\SpaceEngineersModSDK\\Tools\\MwmBuilder\\MwmBuilder.exe"
         SteamLw = ":\\SteamLibrary\\"
         keyval = None
         SteamPath = None
         MwmBuilderPath = None
-        
+
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam") as key:
             keyval = winreg.QueryValueEx(key, 'SteamPath')
-            SteamPath = keyval[0].replace("/","\\")
-        
+            SteamPath = keyval[0].replace("/", "\\")
+
         if not SteamPath is None:
-            if os.path.isfile(join(SteamPath,SteamSEPath)):
-                MwmBuilderPath = join(SteamPath.replace("steam","Steam"),SteamSEPath)
-                
+            if os.path.isfile(join(SteamPath, SteamSEPath)):
+                MwmBuilderPath = join(SteamPath.replace("steam", "Steam"), SteamSEPath)
+
         if MwmBuilderPath is None:
             for x in range(26):
-                tmppath = chr(65+x) + SteamLw + SteamSEPath
+                tmppath = chr(65 + x) + SteamLw + SteamSEPath
                 if os.path.isfile(tmppath):
                     MwmBuilderPath = (tmppath)
                     break
-                    
+
         if not SteamPath is None and MwmBuilderPath is None:
-            if os.path.isfile(join(SteamPath,SteamSESDKPath)):
-                MwmBuilderPath = join(SteamPath.replace("steam","Steam"),SteamSESDKPath)
-               
+            if os.path.isfile(join(SteamPath, SteamSESDKPath)):
+                MwmBuilderPath = join(SteamPath.replace("steam", "Steam"), SteamSESDKPath)
+
         if MwmBuilderPath is None:
             for x in range(26):
-                tmppath = chr(65+x) + SteamLw + SteamSESDKPath
+                tmppath = chr(65 + x) + SteamLw + SteamSESDKPath
                 if os.path.isfile(tmppath):
                     MwmBuilderPath = (tmppath)
                     break
-                    
+
         if not MwmBuilderPath is None:
             MwmBuilderPath = MwmBuilderPath[:1].upper() + MwmBuilderPath[1:]
             bpy.context.user_preferences.addons["space_engineers"].preferences.mwmbuilderactual = MwmBuilderPath
-            
+
         return {'FINISHED'}
-        
+
+
 class AutoSearchMaterialLib(bpy.types.Operator):
     "Automatic search for material library path at common Steam paths"
     bl_idname = "autosearch.matlibpath"
     bl_label = ""
-    
+
     def invoke(self, context, event):
-        
+
         SteamSESDKPath = "steamapps\\common\\SpaceEngineersModSDK\\OriginalContent\\Materials\\"
         SteamLw = ":\\SteamLibrary\\"
         keyval = None
         SteamPath = None
         MatLibPath = None
-        
+
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam") as key:
             keyval = winreg.QueryValueEx(key, 'SteamPath')
-            SteamPath = keyval[0].replace("/","\\")
-                    
+            SteamPath = keyval[0].replace("/", "\\")
+
         if not SteamPath is None:
-            if os.path.isdir(join(SteamPath,SteamSESDKPath)):
-                MatLibPath = join(SteamPath.replace("steam","Steam"),SteamSESDKPath)
-               
+            if os.path.isdir(join(SteamPath, SteamSESDKPath)):
+                MatLibPath = join(SteamPath.replace("steam", "Steam"), SteamSESDKPath)
+
         if MatLibPath is None:
             for x in range(26):
-                tmppath = chr(65+x) + SteamLw + SteamSESDKPath
+                tmppath = chr(65 + x) + SteamLw + SteamSESDKPath
                 if os.path.isfile(tmppath):
                     MatLibPath = (tmppath)
                     break
-                    
+
         if not MatLibPath is None:
             MatLibPath = MatLibPath[:1].upper() + MatLibPath[1:]
             bpy.context.user_preferences.addons["space_engineers"].preferences.materialref = MatLibPath
-            
+
         return {'FINISHED'}
+
 
 class CreateCMatFolders(bpy.types.Operator):
     bl_idname = 'settings.createcmatfolder'
     bl_label = 'Create "C:\KeenSWH\Sandbox\MediaBuild\MEContent\Materials" Junction Folder'
     bl_description = "Create a \"C:\KeenSWH\Sandbox\MediaBuild\MEContent\Materials\" Junction Folder. The MwmBuilder search here for the material library XML files, without it materials didn't work. \n\nOnly Eikster's fixed Version of MwmBuilder didn't need it"
-    
-    def invoke(self, context, event):    
-        
+
+    def invoke(self, context, event):
         if not os.path.isdir("C:\KeenSWH\Sandbox\MediaBuild\MEContent\Materials"):
-            os.makedirs("C:\KeenSWH\Sandbox\MediaBuild\MEContent", exist_ok = True)
-            cmd = 'mklink /J "C:\KeenSWH\Sandbox\MediaBuild\MEContent\Materials" "' + bpy.path.abspath(bpy.context.user_preferences.addons["space_engineers"].preferences.materialref)+'"'
+            os.makedirs("C:\KeenSWH\Sandbox\MediaBuild\MEContent", exist_ok=True)
+            cmd = 'mklink /J "C:\KeenSWH\Sandbox\MediaBuild\MEContent\Materials" "' + bpy.path.abspath(
+                bpy.context.user_preferences.addons["space_engineers"].preferences.materialref) + '"'
             os.system(cmd)
-            print('run command: '+cmd)
-        
+            print('run command: ' + cmd)
+
         return {'FINISHED'}
+
 
 # mapping (scene.block_size) -> (block_size_name, apply_scale_down)
 SIZES = {
-    'LARGE' : [('Large', False)],
-    'SMALL' : [('Small', False)],
-    'SCALE_DOWN' : [('Large', False), ('Small', True)]
+    'LARGE': [('Large', False)],
+    'SMALL': [('Small', False)],
+    'SCALE_DOWN': [('Large', False), ('Small', True)]
 }
+
 
 class BlockExport:
     def __init__(self, settings: ExportSettings):
@@ -169,7 +175,8 @@ class BlockExport:
                     result = cubeBlocks.merge(xml)
                     if MergeResult.NOT_FOUND in result:
                         failed = True
-                        settings.warn("CubeBlocks.sbc contained no definition for SubtypeId [%s]" % (settings.SubtypeId))
+                        settings.warn(
+                            "CubeBlocks.sbc contained no definition for SubtypeId [%s]" % (settings.SubtypeId))
                     elif MergeResult.MERGED in result:
                         settings.info("Updated SubtypeId [%s]" % (settings.SubtypeId))
 
@@ -209,7 +216,6 @@ class BlockExport:
         if failures:
             settings.error("Some export-nodes failed: %s" % list(failures.keys()))
 
-
     def ensureAtLeastOneTextureSlot(self, materials):
         """
         MwmBuilder or AssImp require at least one image-texture in a texture-slot per material.
@@ -217,11 +223,11 @@ class BlockExport:
         Yes, this is an ugly hack.
         """
         for mat in materials:
-            if mat.texture_slots[0] is None: # Texture slots are strange. Index 0 always exists but may be None.
+            if mat.texture_slots[0] is None:  # Texture slots are strange. Index 0 always exists but may be None.
                 mat.texture_slots.add()
             if mat.texture_slots[0].texture is None:
                 mat.texture_slots[0].texture = self.getDummyTexture()
-                self.settings.text("Added dummy texture", "Material: "+mat.name)
+                self.settings.text("Added dummy texture", "Material: " + mat.name)
 
     def getDummyTexture(self):
         for tex in bpy.data.textures:
@@ -333,7 +339,7 @@ class ExportSceneAsBlock(bpy.types.Operator):
                 finally:
                     wm.progress_end()
 
-        except FileNotFoundError as e: # raised when the addon preferences are missing some tool paths
+        except FileNotFoundError as e:  # raised when the addon preferences are missing some tool paths
             self.report({'ERROR'}, "Configuration error: %s" % e)
 
         except CalledProcessError as e:
@@ -347,6 +353,7 @@ class ExportSceneAsBlock(bpy.types.Operator):
                 bpy.ops.object.mode_set(mode=org_mode)
 
         return {'FINISHED'}
+
 
 class UpdateDefinitionsFromBlockScene(bpy.types.Operator):
     bl_idname = "export_scene.space_engineers_update_definitions"
@@ -426,6 +433,7 @@ class UpdateDefinitionsFromBlockScene(bpy.types.Operator):
 
         return {'FINISHED'}
 
+
 class AddDefaultExportNodes(bpy.types.Operator):
     bl_idname = "export_scene.space_engineers_export_nodes"
     bl_label = "Add Default Export-Settings"
@@ -448,6 +456,7 @@ class AddDefaultExportNodes(bpy.types.Operator):
         tree.use_fake_user = True
 
         return {'FINISHED'}
+
 
 class NameLayersFromExportNodes(bpy.types.Operator):
     bl_idname = "object.space_engineers_layer_names"
@@ -475,9 +484,10 @@ class NameLayersFromExportNodes(bpy.types.Operator):
                     namedLayers[li].name = node_label(n)
             elif isinstance(n, SeparateLayerObjectsNode):
                 for i, li in enumerate(layer_indices(n.layer_mask)):
-                    namedLayers[li].name = "%s %d" % (node_label(n), i+1)
+                    namedLayers[li].name = "%s %d" % (node_label(n), i + 1)
 
         return {'FINISHED'}
+
 
 class AddMirroringEmpties(bpy.types.Operator):
     bl_idname = "object.space_engineers_mirrors"
@@ -518,6 +528,7 @@ class AddMirroringEmpties(bpy.types.Operator):
 
         return {'FINISHED'}
 
+
 class ConfigureEmptyAsVolumeHandle(bpy.types.Operator):
     bl_idname = 'object.spceng_empty_with_volume'
     bl_label = 'Configure as volumetric handle'
@@ -536,6 +547,7 @@ class ConfigureEmptyAsVolumeHandle(bpy.types.Operator):
         ob.empty_draw_type = 'CUBE'
         ob.empty_draw_size = 0.5
         return {'FINISHED'}
+
 
 class AddMountPointSkeleton(bpy.types.Operator):
     bl_idname = 'object.spceng_mountpoint_add'
@@ -569,6 +581,7 @@ class AddMountPointSkeleton(bpy.types.Operator):
 
         return {'FINISHED'}
 
+
 class SetupGrid(bpy.types.Operator):
     bl_idname = 'view3d.spceng_setup_grid'
     bl_label = 'Set up Grid'
@@ -588,6 +601,7 @@ class SetupGrid(bpy.types.Operator):
 
         return {'FINISHED'}
 
+
 class CheckForUpdatableMaterials(bpy.types.Operator):
     bl_idname = "info.spceng_check_mat_update"
     bl_label = "SE: Check for Updatable Materials"
@@ -603,6 +617,7 @@ class CheckForUpdatableMaterials(bpy.types.Operator):
         self.report({'INFO'}, "%d materials could be upgraded to use nodes." % (count))
         return {'FINISHED'}
 
+
 class UpdatableToNodesMaterials(bpy.types.Operator):
     bl_idname = "info.spceng_mat_upgrade"
     bl_label = "SE: Upgrade All Materials to use Nodes"
@@ -617,6 +632,7 @@ class UpdatableToNodesMaterials(bpy.types.Operator):
                 self.report({'OPERATOR'}, "Material '%s' upgraded." % (mat.name))
         self.report({'INFO'}, "%d materials upgraded to use nodes." % (count))
         return {'FINISHED'}
+
 
 class UpdateShadersAndNodesMaterials(bpy.types.Operator):
     bl_idname = "info.spceng_node_mat_upgrade"
@@ -638,6 +654,7 @@ class UpdateShadersAndNodesMaterials(bpy.types.Operator):
         self.report({'INFO'}, "%d node materials updated." % (count))
         return {'FINISHED'}
 
+
 class SetupMaterial(bpy.types.Operator):
     bl_idname = "material.spceng_material_setup"
     bl_label = "Reset to Space Engineers Layout"
@@ -649,7 +666,7 @@ class SetupMaterial(bpy.types.Operator):
     def poll(cls, context):
         s = context.space_data
         return (s.type == 'PROPERTIES' and s.context == 'MATERIAL' and context.material) \
-            or (s.type == 'NODE_EDITOR' and s.tree_type == 'ShaderNodeTree' and isinstance(s.id, bpy.types.Material))
+               or (s.type == 'NODE_EDITOR' and s.tree_type == 'ShaderNodeTree' and isinstance(s.id, bpy.types.Material))
 
     def execute(self, context):
         s = context.space_data
@@ -658,6 +675,7 @@ class SetupMaterial(bpy.types.Operator):
         elif s.type == 'NODE_EDITOR':
             upgradeToNodeMaterial(s.id)
         return {'FINISHED'}
+
 
 registered = [
     SteamOpen,
@@ -678,9 +696,11 @@ registered = [
     NameLayersFromExportNodes,
 ]
 
+
 def register():
     for c in registered:
         register_class(c)
+
 
 def unregister():
     for c in reversed(registered):

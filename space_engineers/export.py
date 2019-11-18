@@ -18,11 +18,14 @@ from .fbx import save_single
 
 from bpy_extras.io_utils import axis_conversion, ExportHelper
 
+
 class StdoutOperator():
     def report(self, type, message):
         print(message)
 
+
 STDOUT_OPERATOR = StdoutOperator()
+
 
 class MissbehavingToolError(subprocess.SubprocessError):
     def __init__(self, message: str):
@@ -30,6 +33,7 @@ class MissbehavingToolError(subprocess.SubprocessError):
 
     def __str__(self):
         return self.message
+
 
 def tool_path(propertyName, displayName, toolPath=None):
     if None == toolPath:
@@ -43,6 +47,7 @@ def tool_path(propertyName, displayName, toolPath=None):
         raise FileNotFoundError("%s: no such file %s" % (displayName, toolPath))
 
     return toolPath
+
 
 def write_to_log(logfile, content, cmdline=None, cwd=None, loglines=[]):
     with open(logfile, 'wb') as log:
@@ -60,25 +65,28 @@ def write_to_log(logfile, content, cmdline=None, cwd=None, loglines=[]):
 
         log.write(content)
 
+
 def pretty_xml(elem: ElementTree.Element, level=0, indent="\t"):
-    i = "\n" + level*indent
+    i = "\n" + level * indent
     if len(elem):
         if not elem.text or not elem.text.strip():
             elem.text = i + indent
         if not elem.tail or not elem.tail.strip():
             elem.tail = i
         for elem in elem:
-            pretty_xml(elem, level+1, indent)
+            pretty_xml(elem, level + 1, indent)
         if not elem.tail or not elem.tail.strip():
             elem.tail = i
     else:
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
 
+
 def write_pretty_xml(elem: ElementTree.Element, filepath: str):
     pretty_xml(elem, indent="\t")
     ElementTree.ElementTree(elem).write(
         filepath, encoding="utf-8", xml_declaration=False, method="ordered-attribs")
+
 
 class Names:
     subtypeid = '${BlockPairName}_${CubeSize}'
@@ -88,26 +96,33 @@ class Names:
     icon = '${IconsDir}\\${iconfile}'
     modelpath = '${ModelsDir}${modelfile}'
 
+
 _RE_BLOCK_NAME = re.compile(r"^(.+)\.(Large|Small|\d+)$", re.IGNORECASE)
+
 
 def func():
     pass
+
+
 _FUNCTION_TYPE = type(func)
 del func
 
+
 class ExportSettings:
     def __init__(self, scene, outputDir=None, exportNodes=None, mwmDir=None):
-        def typeCast(data) -> SESceneProperties: # allows type inference in IDE
+        def typeCast(data) -> SESceneProperties:  # allows type inference in IDE
             return data
 
-        self.scene = scene # ObjectSource.getObjects() uses .utils.scene() instead
+        self.scene = scene  # ObjectSource.getObjects() uses .utils.scene() instead
         self.sceneData = typeCast(data(scene))
-        self.outputDir = os.path.normpath(bpy.path.abspath(self.sceneData.export_path if outputDir is None else outputDir))
+        self.outputDir = os.path.normpath(
+            bpy.path.abspath(self.sceneData.export_path if outputDir is None else outputDir))
         self.exportNodes = bpy.data.node_groups[self.sceneData.export_nodes] if exportNodes is None else exportNodes
         self.baseDir = getBaseDir(scene)
         # temporary working directory. used as a workaround for two bugs in mwmbuilder. must be empty initially.
         self.mwmDir = mwmDir if not mwmDir is None else self.outputDir
-        self.lodsmwmDir = os.path.normpath(bpy.path.abspath(self.sceneData.export_path_lods)) if not os.path.normpath(bpy.path.abspath(self.sceneData.export_path_lods)) is None else self.mwmDir
+        self.lodsmwmDir = os.path.normpath(bpy.path.abspath(self.sceneData.export_path_lods)) if not os.path.normpath(
+            bpy.path.abspath(self.sceneData.export_path_lods)) is None else self.mwmDir
         self.operator = STDOUT_OPERATOR
         self.isLogToolOutput = True
         self.isRunMwmbuilder = True
@@ -131,14 +146,14 @@ class ExportSettings:
         try:
             self.ModelsDir = os.path.relpath(self.outputDir, self.baseDir) + '\\'
         except (ValueError):
-            self.ModelsDir = 'Models\\' # fall back to old behaviour if baseDir and outputDir are on different drives
+            self.ModelsDir = 'Models\\'  # fall back to old behaviour if baseDir and outputDir are on different drives
         try:
             self.IconsDir = bpy.path.relpath('//Textures/Icons', self.baseDir)
         except (ValueError):
-            self.IconsDir = '//Textures/Icons' # fall back to old behaviour if baseDir and outputDir are on different drives
+            self.IconsDir = '//Textures/Icons'  # fall back to old behaviour if baseDir and outputDir are on different drives
         # set multiple times on export
-        self._CubeSize = None # corresponds with element-name in CubeBlocks.sbc, setter also sets SubtypeId
-        self.SubtypeId = None # corresponds with element-name in CubeBlocks.sbc
+        self._CubeSize = None  # corresponds with element-name in CubeBlocks.sbc, setter also sets SubtypeId
+        self.SubtypeId = None  # corresponds with element-name in CubeBlocks.sbc
 
         self.cache = {}
 
@@ -168,23 +183,23 @@ class ExportSettings:
                 self.SubtypeId = d.small_subtypeid
 
     @property
-    def BlockPairName(self): # the scene name without Blender's ".nnn" suffix
+    def BlockPairName(self):  # the scene name without Blender's ".nnn" suffix
         name = self.scene.name
         m = _RE_BLOCK_NAME.search(name)
         return m.group(1) if m else name
 
     @property
-    def blockname(self): # legacy, read-only
+    def blockname(self):  # legacy, read-only
         return self.BlockPairName
 
     @property
-    def blocksize(self): # legacy, read-only
+    def blocksize(self):  # legacy, read-only
         return self.CubeSize
 
     @property
     def isOldMwmbuilder(self):
         if self._isOldMwmbuilder is None:
-            self._isOldMwmbuilder = False # (OLD_MWMBUILDER_MD5 == md5sum(self.mwmbuilder))
+            self._isOldMwmbuilder = False  # (OLD_MWMBUILDER_MD5 == md5sum(self.mwmbuilder))
         return self._isOldMwmbuilder
 
     @property
@@ -198,13 +213,13 @@ class ExportSettings:
         if self._mwmbuilder == None:
             self._mwmbuilder = tool_path('mwmbuilder', 'mwmbuilder')
         return self._mwmbuilder
-        
+
     @property
     def mwmbuilderactual(self):
         if self._mwmbuilderactual == None:
             self._mwmbuilderactual = tool_path('mwmbuilderactual', 'mwmbuilderactual')
         return self._mwmbuilderactual
-              
+
     @property
     def havokfilter(self):
         if self._havokfilter == None:
@@ -235,7 +250,7 @@ class ExportSettings:
     def template(self, templateString, **kwargs):
         return Template(templateString).safe_substitute(self, **kwargs)
 
-    def msg(self, level, msg, file=None, node = None):
+    def msg(self, level, msg, file=None, node=None):
         if not file is None and not node is None:
             msg = "%s (%s): %s" % (basename(file), node.name, msg)
         elif not file is None:
@@ -244,24 +259,24 @@ class ExportSettings:
             msg = "(%s): %s" % (node.name, msg)
         self.operator.report({level}, msg)
 
-    def warn(self, msg, file=None, node = None):
+    def warn(self, msg, file=None, node=None):
         self.msg('WARNING', msg, file, node)
 
-    def error(self, msg, file=None, node = None):
+    def error(self, msg, file=None, node=None):
         self.msg('ERROR', msg, file, node)
         self._hadErrors = True
 
-    def info(self, msg, file=None, node = None):
+    def info(self, msg, file=None, node=None):
         self.msg('INFO', msg, file, node)
 
-    def text(self, msg, file=None, node = None):
+    def text(self, msg, file=None, node=None):
         self.msg('OPERATOR', msg, file, node)
 
     def cacheValue(self, key, value):
         self.cache[key] = value
         return value
 
-    def __getitem__(self, key): # makes all attributes available for parameter substitution
+    def __getitem__(self, key):  # makes all attributes available for parameter substitution
         if not type(key) is str or key.startswith('_'):
             raise KeyError(key)
         try:
@@ -272,22 +287,22 @@ class ExportSettings:
         except AttributeError:
             raise KeyError(key)
 
+
 # FWD = 'Z'
 # UP = 'Y'
 # MATRIX_NORMAL = axis_conversion(to_forward=FWD, to_up=UP).to_4x4()
 # MATRIX_SCALE_DOWN = Matrix.Scale(0.2, 4) * MATRIX_NORMAL
 
-def export_fbx(settings: ExportSettings, filepath, objects, fbx_settings = None):
-
+def export_fbx(settings: ExportSettings, filepath, objects, fbx_settings=None):
     if bpy.app.version <= (2, 78, 0):
         fbxSettings = {
             # FBX operator defaults
             # some internals of the fbx exporter depend on them and will step out of line if they are not present
             'version': 'BIN7400',
             'use_mesh_edges': False,
-            'use_custom_props': False, # SE / Havok properties are hacked directly into the modified fbx importer
+            'use_custom_props': False,  # SE / Havok properties are hacked directly into the modified fbx importer
             # anim, BIN7400
-            'bake_anim': False, # no animation export to SE by default
+            'bake_anim': False,  # no animation export to SE by default
             'bake_anim_use_all_bones': True,
             'bake_anim_use_nla_strips': True,
             'bake_anim_use_all_actions': True,
@@ -295,11 +310,11 @@ def export_fbx(settings: ExportSettings, filepath, objects, fbx_settings = None)
             'bake_anim_step': 1.0,
             'bake_anim_simplify_factor': 1.0,
             # anim, ASCII6100
-            'use_anim' : False, # no animation export to SE by default
-            'use_anim_action_all' : True,
-            'use_default_take' : True,
-            'use_anim_optimize' : True,
-            'anim_optimize_precision' : 6.0,
+            'use_anim': False,  # no animation export to SE by default
+            'use_anim_action_all': True,
+            'use_default_take': True,
+            'use_anim_optimize': True,
+            'anim_optimize_precision': 6.0,
             # referenced files stay on automatic, MwmBuilder only cares about what's written to its .xml file
             'path_mode': 'AUTO',
             'embed_textures': False,
@@ -311,12 +326,12 @@ def export_fbx(settings: ExportSettings, filepath, objects, fbx_settings = None)
             'object_types': {'MESH', 'EMPTY'},
             'axis_forward': 'Z',
             'axis_up': 'Y',
-            'bake_space_transform': True, # the export to Havok needs this, it's off for the MwmFileNode
+            'bake_space_transform': True,  # the export to Havok needs this, it's off for the MwmFileNode
             'use_mesh_modifiers': True,
             'mesh_smooth_type': 'OFF',
-            'use_tspace': settings.isUseTangentSpace, # TODO deprecate settings.isUseTangentSpace
+            'use_tspace': settings.isUseTangentSpace,  # TODO deprecate settings.isUseTangentSpace
             # for characters
-            'global_scale': 1.0, # Resizes Havok collision mesh in .hkt (fixed for Blender 2.79) Default=1.0 for 2.78c
+            'global_scale': 1.0,  # Resizes Havok collision mesh in .hkt (fixed for Blender 2.79) Default=1.0 for 2.78c
             'use_armature_deform_only': False,
             'add_leaf_bones': False,
             'armature_nodetype': 'NULL',
@@ -329,9 +344,9 @@ def export_fbx(settings: ExportSettings, filepath, objects, fbx_settings = None)
             # some internals of the fbx exporter depend on them and will step out of line if they are not present
             'version': 'BIN7400',
             'use_mesh_edges': False,
-            'use_custom_props': False, # SE / Havok properties are hacked directly into the modified fbx importer
+            'use_custom_props': False,  # SE / Havok properties are hacked directly into the modified fbx importer
             # anim, BIN7400
-            'bake_anim': False, # no animation export to SE by default
+            'bake_anim': False,  # no animation export to SE by default
             'bake_anim_use_all_bones': True,
             'bake_anim_use_nla_strips': True,
             'bake_anim_use_all_actions': True,
@@ -339,11 +354,11 @@ def export_fbx(settings: ExportSettings, filepath, objects, fbx_settings = None)
             'bake_anim_step': 1.0,
             'bake_anim_simplify_factor': 1.0,
             # anim, ASCII6100
-            'use_anim' : False, # no animation export to SE by default
-            'use_anim_action_all' : True,
-            'use_default_take' : True,
-            'use_anim_optimize' : True,
-            'anim_optimize_precision' : 6.0,
+            'use_anim': False,  # no animation export to SE by default
+            'use_anim_action_all': True,
+            'use_default_take': True,
+            'use_anim_optimize': True,
+            'anim_optimize_precision': 6.0,
             # referenced files stay on automatic, MwmBuilder only cares about what's written to its .xml file
             'path_mode': 'AUTO',
             'embed_textures': False,
@@ -355,12 +370,12 @@ def export_fbx(settings: ExportSettings, filepath, objects, fbx_settings = None)
             'object_types': {'MESH', 'EMPTY'},
             'axis_forward': 'Z',
             'axis_up': 'Y',
-            'bake_space_transform': True, # the export to Havok needs this, it's off for the MwmFileNode
+            'bake_space_transform': True,  # the export to Havok needs this, it's off for the MwmFileNode
             'use_mesh_modifiers': True,
             'mesh_smooth_type': 'OFF',
-            'use_tspace': settings.isUseTangentSpace, # TODO deprecate settings.isUseTangentSpace
+            'use_tspace': settings.isUseTangentSpace,  # TODO deprecate settings.isUseTangentSpace
             # for characters
-            'global_scale': 0.1, # Resizes Havok collision mesh in .hkt (fixed for Blender 2.79) Default=1.0 for 2.78c
+            'global_scale': 0.1,  # Resizes Havok collision mesh in .hkt (fixed for Blender 2.79) Default=1.0 for 2.78c
             'use_armature_deform_only': False,
             'add_leaf_bones': False,
             'armature_nodetype': 'NULL',
@@ -370,23 +385,23 @@ def export_fbx(settings: ExportSettings, filepath, objects, fbx_settings = None)
 
     if fbx_settings:
         if isinstance(fbx_settings, bpy.types.PropertyGroup):
-            fbx_settings = {p : getattr(fbx_settings, p) for p in fbx_settings.rna_type.properties.keys()}
+            fbx_settings = {p: getattr(fbx_settings, p) for p in fbx_settings.rna_type.properties.keys()}
         fbxSettings.update(**fbx_settings)
 
     # these cannot be overriden and are always set here
-    fbxSettings['use_selection'] = False # because of context_objects
+    fbxSettings['use_selection'] = False  # because of context_objects
     fbxSettings['context_objects'] = objects
 
     global_matrix = axis_conversion(to_forward=fbxSettings['axis_forward'], to_up=fbxSettings['axis_up']).to_4x4()
     scale = fbxSettings['global_scale']
     if (settings.scaleDown):
         scale *= 0.2
-    
+
     if bpy.app.version <= (2, 78, 0):
-        if abs(1.0-scale) >= 0.0001:
+        if abs(1.0 - scale) >= 0.0001:
             global_matrix = Matrix.Scale(scale, 4) * global_matrix
     else:
-        if abs(1.0-scale) >= 0.000001:
+        if abs(1.0 - scale) >= 0.000001:
             global_matrix = Matrix.Scale(scale, 4) * global_matrix
     fbxSettings['global_matrix'] = global_matrix
 
@@ -397,13 +412,16 @@ def export_fbx(settings: ExportSettings, filepath, objects, fbx_settings = None)
         **fbxSettings
     )
 
+
 def fbx_to_hkt(settings: ExportSettings, srcfile, dstfile):
     settings.callTool(
         [settings.fbximporter, srcfile, dstfile],
-        logfile=dstfile+'.convert.log'
+        logfile=dstfile + '.convert.log'
     )
 
+
 from .havok_options import HAVOK_OPTION_FILE_CONTENT
+
 
 def hkt_filter(settings: ExportSettings, srcfile, dstfile, options=HAVOK_OPTION_FILE_CONTENT):
     hko = tempfile.NamedTemporaryFile(mode='wt', prefix='space_engineers_', suffix=".hko", delete=False)
@@ -413,22 +431,23 @@ def hkt_filter(settings: ExportSettings, srcfile, dstfile, options=HAVOK_OPTION_
 
         settings.callTool(
             [settings.havokfilter, '-t', '-s', hko.name, '-p', dstfile, srcfile],
-            logfile=dstfile+'.filter.log',
-            successfulExitCodes=[0,1])
+            logfile=dstfile + '.filter.log',
+            successfulExitCodes=[0, 1])
     finally:
         os.remove(hko.name)
+
 
 def mwmbuilder(settings: ExportSettings, fbxfile: str, havokfile: str, paramsfile: str, mwmfile: str):
     if not settings.isRunMwmbuilder:
         if settings.isLogToolOutput:
-            write_to_log(mwmfile+'.log', b"mwmbuilder skipped.")
+            write_to_log(mwmfile + '.log', b"mwmbuilder skipped.")
         return
 
     mwmargs = bpy.context.user_preferences.addons[__package__].preferences.mwmbuildercmdarg.strip()
     extracmds = mwmargs.split(" ")
-    
+
     contentDir = join(settings.mwmDir, 'Sources')
-    os.makedirs(contentDir, exist_ok = True)
+    os.makedirs(contentDir, exist_ok=True)
     basename = os.path.splitext(os.path.basename(mwmfile))[0]
 
     def copy(srcfile: str, dstfile: str):
@@ -440,11 +459,12 @@ def mwmbuilder(settings: ExportSettings, fbxfile: str, havokfile: str, paramsfil
     copy(havokfile, join(contentDir, basename + '.hkt'))
 
     if settings.useactualmwmbuilder:
-        cmdline = [settings.mwmbuilderactual, '/s:Sources', '/m:'+basename+'.fbx', '/o:.\\']
+        cmdline = [settings.mwmbuilderactual, '/s:Sources', '/m:' + basename + '.fbx', '/o:.\\']
     elif settings.isEkmwmbuilder:
-        cmdline = [settings.mwmbuilder, '/s:Sources', '/m:'+basename+'.fbx', '/o:.\\' , '/x:'+settings.materialref , '/lod:'+settings.lodsmwmDir]
+        cmdline = [settings.mwmbuilder, '/s:Sources', '/m:' + basename + '.fbx', '/o:.\\', '/x:' + settings.materialref,
+                   '/lod:' + settings.lodsmwmDir]
     else:
-        cmdline = [settings.mwmbuilder, '/s:Sources', '/m:'+basename+'.fbx', '/o:.\\']
+        cmdline = [settings.mwmbuilder, '/s:Sources', '/m:' + basename + '.fbx', '/o:.\\']
 
     if extracmds:
         for cmd in extracmds:
@@ -453,10 +473,12 @@ def mwmbuilder(settings: ExportSettings, fbxfile: str, havokfile: str, paramsfil
 
     def checkForLoggedErrors(logtext):
         if b": ERROR:" in logtext:
-            raise MissbehavingToolError('MwmBuilder failed without an appropriate exit-code. Please check the log-file.')
+            raise MissbehavingToolError(
+                'MwmBuilder failed without an appropriate exit-code. Please check the log-file.')
 
-    settings.callTool(cmdline, cwd=settings.mwmDir, logfile=mwmfile+'.log', logtextInspector=checkForLoggedErrors)
+    settings.callTool(cmdline, cwd=settings.mwmDir, logfile=mwmfile + '.log', logtextInspector=checkForLoggedErrors)
     copy(join(settings.mwmDir, basename + '.mwm'), mwmfile)
+
 
 def generateBlockDefXml(
         settings: ExportSettings,
@@ -466,7 +488,6 @@ def generateBlockDefXml(
         mirroringObjects: iter,
         mirroringBlockSubtypeId: str,
         constrModelFiles: iter):
-
     d = data(settings.scene)
 
     block = ElementTree.Element('Definition')
@@ -475,7 +496,7 @@ def generateBlockDefXml(
     subtypeId = ElementTree.SubElement(id, 'SubtypeId')
     subtypeId.text = settings.SubtypeId
 
-    if iconFile: # only change the icon if there's actually an iconFile
+    if iconFile:  # only change the icon if there's actually an iconFile
         icon = ElementTree.SubElement(block, 'Icon')
         if not os.path.splitext(iconFile)[1]:
             iconFile += ".dds"
@@ -487,7 +508,7 @@ def generateBlockDefXml(
     ElementTree.SubElement(block, 'CubeSize').text = settings.CubeSize
     ElementTree.SubElement(block, 'BlockTopology').text = 'TriangleMesh'
 
-    x, z, y = d.block_dimensions # z and y switched on purpose; y is up, z is forward in SE
+    x, z, y = d.block_dimensions  # z and y switched on purpose; y is up, z is forward in SE
     eSize = ElementTree.SubElement(block, 'Size')
     eSize.attrib = OrderedDict([('x', str(x)), ('y', str(y)), ('z', str(z)), ])
 
@@ -504,7 +525,7 @@ def generateBlockDefXml(
     if numConstr > 0:
         constr = ElementTree.SubElement(block, 'BuildProgressModels')
         for i, constrModelFile in enumerate(constrModelFiles):
-            upperBound = "%.2f" % (1.0 * (i+1) / numConstr)
+            upperBound = "%.2f" % (1.0 * (i + 1) / numConstr)
             try:
                 constrModelpath = os.path.relpath(os.path.join(settings.outputDir, constrModelFile), settings.baseDir)
             except ValueError:
@@ -530,13 +551,11 @@ def generateBlockDefXml(
             else:
                 settings.warn("Mirroring%s defined by object %s is '%s'. Reset to 'None'." % (axis, o.name, enum))
     if len(mirroring) > 0:
-        for axis in ('X','Y','Z'):
-            mirroringElem = ElementTree.SubElement(block, 'Mirroring'+axis)
+        for axis in ('X', 'Y', 'Z'):
+            mirroringElem = ElementTree.SubElement(block, 'Mirroring' + axis)
             mirroringElem.text = mirroring.get(axis, 'None')
 
     blockPairName = ElementTree.SubElement(block, 'BlockPairName')
     blockPairName.text = settings.BlockPairName
 
     return block
-
-

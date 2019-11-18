@@ -5,14 +5,15 @@ from .nodes import LayerObjectsNode, SeparateLayerObjectsNode, MwmFileNode, Havo
 from .utils import layers
 
 
-def newCombinedLayers(tree, label="", location=(0,0), layer_mask=0b10000000000000000000):
+def newCombinedLayers(tree, label="", location=(0, 0), layer_mask=0b10000000000000000000):
     layer = tree.nodes.new(LayerObjectsNode.bl_idname)
     layer.label = label
     layer.location = Vector(location)
     layer.layer_mask = layers(layer_mask)
     return layer.outputs[0]
 
-def newSeparateLayers(tree, label=None, location=(0,0), layer_mask=0b10000000000000000000):
+
+def newSeparateLayers(tree, label=None, location=(0, 0), layer_mask=0b10000000000000000000):
     layer = tree.nodes.new(SeparateLayerObjectsNode.bl_idname)
     if not label is None:
         layer.label = label
@@ -20,7 +21,8 @@ def newSeparateLayers(tree, label=None, location=(0,0), layer_mask=0b10000000000
     layer.layer_mask = layers(layer_mask)
     return [o for o in layer.outputs if o.enabled]
 
-def newMwmBuilder(tree, label=None, location=(0,0), name=None, objects=None, physics=None, lods=[]):
+
+def newMwmBuilder(tree, label=None, location=(0, 0), name=None, objects=None, physics=None, lods=[]):
     mwm = tree.nodes.new(MwmFileNode.bl_idname)
     if not label is None:
         mwm.label = label
@@ -43,7 +45,8 @@ def newMwmBuilder(tree, label=None, location=(0,0), name=None, objects=None, phy
             s.hide = True
     return mwm.outputs[0]
 
-def newHavokConverter(tree, label=None, location=(0,0), name=None, objects=None):
+
+def newHavokConverter(tree, label=None, location=(0, 0), name=None, objects=None):
     havok = tree.nodes.new(HavokFileNode.bl_idname)
     havok.location = Vector(location)
     if not label is None:
@@ -57,7 +60,8 @@ def newHavokConverter(tree, label=None, location=(0,0), name=None, objects=None)
         tree.links.new(objects, havok.inputs['Objects'])
     return havok.outputs[0]
 
-def newText(tree, label=None, location=(0,0), text=""):
+
+def newText(tree, label=None, location=(0, 0), text=""):
     txt = tree.nodes.new(TemplateStringNode.bl_idname)
     if not label is None:
         txt.label = label
@@ -66,7 +70,8 @@ def newText(tree, label=None, location=(0,0), text=""):
     txt.width = 190.0
     return txt.outputs[0]
 
-def newBlockDef(tree, label=None, location=(0,0), model=None, mountPoints=None, mirroring=None, constrs=[]):
+
+def newBlockDef(tree, label=None, location=(0, 0), model=None, mountPoints=None, mirroring=None, constrs=[]):
     bd = tree.nodes.new(BlockDefinitionNode.bl_idname)
     bd.location = Vector(location)
     bd.width = 220.0
@@ -85,25 +90,26 @@ def newBlockDef(tree, label=None, location=(0,0), model=None, mountPoints=None, 
         if s.name.startswith("Constr") and not s.is_linked:
             s.hide = True
 
+
 def createDefaultTree(tree: BlockExportTree):
-    layerMain   = newCombinedLayers(tree, "Main Model",          (-777,  506), 0b10000000000000000000)
-    layerPhys   = newCombinedLayers(tree, "Collision",           (-777,  361), 0b01000000000000000000)
-    layerLOD    = newSeparateLayers(tree, "Level of Detail",     (-777,  216), 0b00000111000000000000)
+    layerMain = newCombinedLayers(tree, "Main Model", (-777, 506), 0b10000000000000000000)
+    layerPhys = newCombinedLayers(tree, "Collision", (-777, 361), 0b01000000000000000000)
+    layerLOD = newSeparateLayers(tree, "Level of Detail", (-777, 216), 0b00000111000000000000)
     layerConstr = newSeparateLayers(tree, "Construction Phases", (-777, - 96), 0b00000000001110000000)
-    layerMP     = newCombinedLayers(tree, "Mount Points",        ( 173,  283), 0b00100000000000000000)
-    layerMirror = newCombinedLayers(tree, "Mirroring",           ( 173,  134), 0b00010000000000000000)
+    layerMP = newCombinedLayers(tree, "Mount Points", (173, 283), 0b00100000000000000000)
+    layerMirror = newCombinedLayers(tree, "Mirroring", (173, 134), 0b00010000000000000000)
 
     physics = newHavokConverter(tree, "Havok", (-516, 412), '${SubtypeId}', layerPhys)
 
     nameLOD = newText(tree, "LOD Name", (-564, 82), '${SubtypeId}_LOD${n}')
-    mwmLODs = [newMwmBuilder(tree, "Mwm LOD%d" % (i+1), (-105, 392 - 128*i), nameLOD, o, physics)
+    mwmLODs = [newMwmBuilder(tree, "Mwm LOD%d" % (i + 1), (-105, 392 - 128 * i), nameLOD, o, physics)
                for i, o in enumerate(layerLOD)]
 
     mwmMain = newMwmBuilder(tree, "Mwm Main", (173, 551), '${SubtypeId}', layerMain, physics,
-                            [(s,d) for s, d in zip(mwmLODs, [10,30,50])])
+                            [(s, d) for s, d in zip(mwmLODs, [10, 30, 50])])
 
     nameConstr = newText(tree, "Construction Name", (-564, -9), '${SubtypeId}_Constr${n}')
-    mwmConstrs = [newMwmBuilder(tree, "Mwm Constr%d" % (i+1), (-105, -21 - 128*i), nameConstr, o, physics)
-               for i, o in enumerate(layerConstr)]
+    mwmConstrs = [newMwmBuilder(tree, "Mwm Constr%d" % (i + 1), (-105, -21 - 128 * i), nameConstr, o, physics)
+                  for i, o in enumerate(layerConstr)]
 
     newBlockDef(tree, None, (473, 105), mwmMain, layerMP, layerMirror, mwmConstrs)

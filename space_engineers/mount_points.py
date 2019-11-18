@@ -1,6 +1,7 @@
 from collections import namedtuple, OrderedDict
 from xml.etree import ElementTree
-from bgl import glEnable, glDisable, glColor3f, glVertex3f, glLineWidth, glBegin, glEnd, glLineStipple, GL_LINE_STRIP, GL_LINES, GL_LINE_STIPPLE
+from bgl import glEnable, glDisable, glColor3f, glVertex3f, glLineWidth, glBegin, glEnd, glLineStipple, GL_LINE_STRIP, \
+    GL_LINES, GL_LINE_STIPPLE
 from mathutils import Matrix, Vector
 from math import sqrt
 from .utils import BoxCorner, bounds, sparse, X, Y, Z, transX, transY, transZ, rot, mirror, flip, layers, layer_bits, \
@@ -13,27 +14,28 @@ MOUNT_POINT_MATERIAL = 'MountPoint'
 MOUNT_POINT_COLOR = (0.317, 1, 0.032)
 
 Side = namedtuple('Side', (
-    'normal', # direction a polygon must be roughly facing to be considered on this side
-    'name', # name of the side as defined by <MountPoint Side=...>
-    'projection', # converts this side's plane coordinates into XY-plane coordinates
-    'start_vertex', # starting corner (origin) in terms of Object.bound_box
-    'end_vertex', # end corner in terms of Object.bound_box
+    'normal',  # direction a polygon must be roughly facing to be considered on this side
+    'name',  # name of the side as defined by <MountPoint Side=...>
+    'projection',  # converts this side's plane coordinates into XY-plane coordinates
+    'start_vertex',  # starting corner (origin) in terms of Object.bound_box
+    'end_vertex',  # end corner in terms of Object.bound_box
 ))
 
 # TODO re-formulate the projections in terms of mirror.<axis> and flip.<axies>
 Sides = [
-    Side( Vector(( 0,  0,  1)), 'Top',    sparse(((X,X,-1), (Y,Y,-1))), BoxCorner.BTR, BoxCorner.FTL ),
-    Side( Vector(( 0,  0, -1)), 'Bottom', sparse(((X,X,-1), (Y,Y, 1))), BoxCorner.FBR, BoxCorner.BBL ),
+    Side(Vector((0, 0, 1)), 'Top', sparse(((X, X, -1), (Y, Y, -1))), BoxCorner.BTR, BoxCorner.FTL),
+    Side(Vector((0, 0, -1)), 'Bottom', sparse(((X, X, -1), (Y, Y, 1))), BoxCorner.FBR, BoxCorner.BBL),
     # right in Blender but left when viewed from the back (as SE does)
-    Side( Vector(( 1,  0,  0)), 'Left',   sparse(((Y,X, 1), (Z,Y, 1))), BoxCorner.FBR, BoxCorner.BTR ),
+    Side(Vector((1, 0, 0)), 'Left', sparse(((Y, X, 1), (Z, Y, 1))), BoxCorner.FBR, BoxCorner.BTR),
     # left in Blender but right when viewed from the back (as SE does)
-    Side( Vector((-1,  0,  0)), 'Right',  sparse(((Y,X,-1), (Z,Y, 1))), BoxCorner.BBL, BoxCorner.FTL ),
-    Side( Vector(( 0, -1,  0)), 'Front',  sparse(((X,X, 1), (Z,Y, 1))), BoxCorner.FBL, BoxCorner.FTR ),
-    Side( Vector(( 0,  1,  0)), 'Back',   sparse(((X,X,-1), (Z,Y, 1))), BoxCorner.BBR, BoxCorner.BTL ),
+    Side(Vector((-1, 0, 0)), 'Right', sparse(((Y, X, -1), (Z, Y, 1))), BoxCorner.BBL, BoxCorner.FTL),
+    Side(Vector((0, -1, 0)), 'Front', sparse(((X, X, 1), (Z, Y, 1))), BoxCorner.FBL, BoxCorner.FTR),
+    Side(Vector((0, 1, 0)), 'Back', sparse(((X, X, -1), (Z, Y, 1))), BoxCorner.BBR, BoxCorner.BTL),
 ]
 
 # the dot-product of two vectors with an angle of 45 degrees between them
 ANGLE_45 = sqrt(2.0) / 2.0
+
 
 def mount_point_definitions(mount_point_objects):
     """
@@ -50,15 +52,16 @@ def mount_point_definitions(mount_point_objects):
 
     mount_points = []
 
-    def first(iterable): return next(iterable, None)
+    def first(iterable):
+        return next(iterable, None)
 
     for ob in mount_point_objects:
         if 'MESH' != ob.type: continue
 
         mp_mat_slot = first(slot for slot, mat in enumerate(ob.material_slots)
-            if MOUNT_POINT_MATERIAL == mat.name)
+                            if MOUNT_POINT_MATERIAL == mat.name)
 
-        if None == mp_mat_slot: continue # 0 evaluates to False
+        if None == mp_mat_slot: continue  # 0 evaluates to False
 
         rotate_to_world = ob.matrix_world.to_3x3().normalized()
 
@@ -70,7 +73,7 @@ def mount_point_definitions(mount_point_objects):
                 if not poly.material_index == mp_mat_slot: continue
 
                 polyside = first(side for side in Sides
-                    if (rotate_to_world * poly.normal * side.normal) > ANGLE_45)
+                                 if (rotate_to_world * poly.normal * side.normal) > ANGLE_45)
 
                 if not polyside: continue
 
@@ -89,8 +92,10 @@ def mount_point_definitions(mount_point_objects):
 
     return mount_points
 
+
 def _floatstr(f):
     return ("%.2f" % (f)).replace('-0.00', '0.00')
+
 
 def mount_points_xml(mount_points):
     e = ElementTree.Element("MountPoints")
@@ -99,31 +104,32 @@ def mount_points_xml(mount_points):
         mp = ElementTree.SubElement(e, "MountPoint")
         mp.attrib = OrderedDict([
             ('Side', side),
-            ('StartX',_floatstr(startx)),
-            ('StartY',_floatstr(starty)),
-            ('EndX',_floatstr(endx)),
-            ('EndY',_floatstr(endy)),
+            ('StartX', _floatstr(startx)),
+            ('StartY', _floatstr(starty)),
+            ('EndX', _floatstr(endx)),
+            ('EndY', _floatstr(endy)),
         ])
 
     return e
 
+
 def create_mount_point_skeleton():
     quad = [
         (-0.75, 0, -0.75),
-        ( 0.75, 0, -0.75),
-        ( 0.75, 0,  0.75),
-        (-0.75, 0,  0.75)
+        (0.75, 0, -0.75),
+        (0.75, 0, 0.75),
+        (-0.75, 0, 0.75)
     ]
 
     x, y, z = block_bounds().btr
 
     transforms = [
-       transY(-y)                ,
-       transY( y) *  rot.z    ,
-       transX( x) *  rot.halfz,
-       transX(-x) * -rot.halfz,
-       transZ(-z) *  rot.halfx,
-       transZ( z) * -rot.halfx,
+        transY(-y),
+        transY(y) * rot.z,
+        transX(x) * rot.halfz,
+        transX(-x) * -rot.halfz,
+        transZ(-z) * rot.halfx,
+        transZ(z) * -rot.halfx,
     ]
 
     verts = []
@@ -132,7 +138,7 @@ def create_mount_point_skeleton():
 
     for transform in transforms:
         new_verts = [transform * Vector(v) for v in quad]
-        new_face = (idx, idx+1, idx+2, idx+3)
+        new_face = (idx, idx + 1, idx + 2, idx + 3)
 
         verts += new_verts
         faces.append(new_face)
@@ -170,6 +176,7 @@ def mount_point_color():
     except KeyError:
         return MOUNT_POINT_COLOR
 
+
 def draw_box(verts):
     glBegin(GL_LINE_STRIP)
     for i in 0, 1, 2, 3, 0, 4, 5, 6, 7, 4:
@@ -188,6 +195,7 @@ def draw_box(verts):
     glVertex3f(*verts[7])
     glEnd()
 
+
 def draw_block_box():
     if not show_block_bounds():
         return
@@ -202,6 +210,7 @@ def draw_block_box():
     draw_box(box)
     glDisable(GL_LINE_STIPPLE)
 
+
 def tag_view3d_for_redraw():
     for window in bpy.context.window_manager.windows:
         for area in window.screen.areas:
@@ -210,7 +219,9 @@ def tag_view3d_for_redraw():
                     if region.type == 'WINDOW':
                         region.tag_redraw()
 
+
 handle_block_box = None
+
 
 def enable_draw_callback():
     global handle_block_box

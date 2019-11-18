@@ -6,7 +6,7 @@ import re
 import bpy
 
 _RE_TEXTURE_TYPE = re.compile(
-    r"(?P<ng>Normal_?Gloss(?:iness)?|NG)|" # needs to be before "Normal" due to non-optional suffix "Gloss"
+    r"(?P<ng>Normal_?Gloss(?:iness)?|NG)|"  # needs to be before "Normal" due to non-optional suffix "Gloss"
     r"(?P<cm>(?:(?:Base_?)?Color|Albedo)_?Metal(?:ness|ic)?|CM)|"
     r"(?P<add>Add(?:_?Maps?|itional)?)|"
     r"(?P<alphamask>Alpha(?:Mask)?)",
@@ -22,6 +22,7 @@ _RE_TEXTURE_FILENAME = re.compile(
     r"^(?P<basename>.+?)_?(?:" + _RE_TEXTURE_TYPE.pattern + r")?\.(?P<extension>[^.]+)$",
     re.IGNORECASE)
 
+
 class TextureType(Enum):
     # NameInParameterXml = 'file-suffix'
     ColorMetal = 'cm'
@@ -29,7 +30,9 @@ class TextureType(Enum):
     AddMaps = 'add'
     Alphamask = 'alphamask'
 
+
 TextureFileName = namedtuple('TextureFileName', ('filepath', 'basename', 'textureType', 'extension'))
+
 
 def _textureTypeFromMatch(match, alt=False) -> TextureType:
     if match is None:
@@ -40,15 +43,18 @@ def _textureTypeFromMatch(match, alt=False) -> TextureType:
                 if alt == bool(match.group('alt')):
                     return t
             except IndexError:
-                return t # if there's no matching group 'alt' we already found our match
+                return t  # if there's no matching group 'alt' we already found our match
     return None
+
 
 def textureTypeFromLabel(label: str, alt=False) -> TextureType:
     return _textureTypeFromMatch(_RE_TEXTURE_LABEL.match(label), alt=alt)
 
+
 def textureTypeFromObjectName(obj, alt=False) -> TextureType:
     textureType = textureTypeFromLabel(obj.name, alt=alt)
     return textureType if textureType else textureTypeFromLabel(obj.label, alt=alt)
+
 
 def imageNodes(nodes, alt=False):
     """
@@ -56,15 +62,18 @@ def imageNodes(nodes, alt=False):
     The map will only contain keys for which there actually are texture-nodes.
     The nodes do not necessarily have images, use imagesFromNodes() for that.
     """
-    pairs = ((textureTypeFromObjectName(img, alt=alt), img) for img in nodes if isinstance(img, bpy.types.ShaderNodeTexImage))
-    return {t : n for t, n in pairs if t}
+    pairs = ((textureTypeFromObjectName(img, alt=alt), img) for img in nodes if
+             isinstance(img, bpy.types.ShaderNodeTexImage))
+    return {t: n for t, n in pairs if t}
+
 
 def imagesFromNodes(nodes, alt=False):
     """
     Extracts a map {TextureType -> bpy.types.Image} from the given nodes.
     The map will only contain keys for which there actually are images.
     """
-    return {t : n.image for t, n in imageNodes(nodes, alt=alt).items() if n.image}
+    return {t: n.image for t, n in imageNodes(nodes, alt=alt).items() if n.image}
+
 
 def textureFileNameFromPath(filepath: str) -> TextureFileName:
     """
@@ -78,11 +87,12 @@ def textureFileNameFromPath(filepath: str) -> TextureFileName:
     if not match:
         return TextureFileName(filepath, filename.lower(), None, None)
     return TextureFileName(
-        filepath = filepath,
-        basename = match.group('basename').lower(),
-        textureType = _textureTypeFromMatch(match),
-        extension = match.group('extension').lower(),
+        filepath=filepath,
+        basename=match.group('basename').lower(),
+        textureType=_textureTypeFromMatch(match),
+        extension=match.group('extension').lower(),
     )
+
 
 def textureFilesFromPath(dirpath: str, acceptedExtensions={'dds'}) -> dict:
     """
@@ -92,13 +102,14 @@ def textureFilesFromPath(dirpath: str, acceptedExtensions={'dds'}) -> dict:
     try:
         files = (textureFileNameFromPath(os.path.join(dirpath, f)) for f in os.listdir(dirpath))
     except FileNotFoundError:
-        return {} # an image.filepath might not actually exist
+        return {}  # an image.filepath might not actually exist
     files = filter(lambda f: f and f.textureType and f.extension in acceptedExtensions, files)
     # for files with equal basename and equivalent texture-type this chooses the longest filename (as most descriptive)
     files = sorted(files, key=lambda f: (f.basename, len(f.filepath)))
     files = groupby(files, lambda f: f.basename)
-    files = {basename : {f.textureType : f for f in groupedFiles} for basename, groupedFiles in files}
+    files = {basename: {f.textureType: f for f in groupedFiles} for basename, groupedFiles in files}
     return files
+
 
 def imageFromFilePath(filepath):
     """
@@ -112,9 +123,10 @@ def imageFromFilePath(filepath):
     try:
         filepath = bpy.path.relpath(filepath)
     except ValueError:
-        pass # .blend and image are on different drives, so fall back to using the absolute path
+        pass  # .blend and image are on different drives, so fall back to using the absolute path
     image = bpy.data.images.load(filepath)
     return image
+
 
 def matchingFileNamesFromFilePath(filepath):
     """
@@ -129,4 +141,3 @@ def matchingFileNamesFromFilePath(filepath):
     allFilesInDir = textureFilesFromPath(os.path.dirname(filepath))
     matchingFiles = allFilesInDir.get(textureFileName.basename, None)
     return matchingFiles if matchingFiles else {}
-

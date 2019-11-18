@@ -25,6 +25,7 @@ class MathOperation(Enum):
     MODULO = 18
     ABSOLUTE = 19
 
+
 class NormalSpace(Enum):
     TANGENT = 1
     OBJECT = 2
@@ -32,26 +33,32 @@ class NormalSpace(Enum):
     BLENDER_OBJECT = 4
     BLENDER_WORLD = 5
 
+
 class GlossyDistribution(Enum):
     SHARP = 1
     BECKMANN = 2
     GGX = 3
     ASHIKHMIN_SHIRLEY = 4
 
+
 class ImageColorspace(Enum):
     COLOR = 1
     NONE = 2
+
 
 class CreateMode(Enum):
     ADD = 1
     REPLACE = 2
     REUSE = 3
 
+
 def blId(nodeType):
     return nodeType.bl_rna.identifier
 
+
 _RE_BLENDER_NAME = re.compile(r"^(.+?)(?:\.(\d+)+)?$")
 _RE_WHITESPACE = re.compile(r"(?:\s|[-+/.])+")
+
 
 def firstMatching(iterable, type, name=None):
     if not name is None:
@@ -67,6 +74,7 @@ def firstMatching(iterable, type, name=None):
                 return item
     return None
 
+
 class SocketSpec:
     def __init__(self, type, name, default=None, min=None, max=None):
         self.type = type
@@ -74,6 +82,7 @@ class SocketSpec:
         self.default = default
         self.min = min
         self.max = max
+
 
 class ShaderNodesBuilder:
     def __init__(self, tree: bpy.types.NodeTree, defaultCreate=CreateMode.ADD):
@@ -122,7 +131,8 @@ class ShaderNodesBuilder:
         self.connectSockets(((op1, n.inputs[0]), (op2, n.inputs[1])))
         return n.outputs[0]
 
-    def newGlossy(self, name=None, label=None, location=None, distribution=None, color=None, roughness=None, normal=None):
+    def newGlossy(self, name=None, label=None, location=None, distribution=None, color=None, roughness=None,
+                  normal=None):
         n = self.newNode(bpy.types.ShaderNodeBsdfGlossy, name, label, location)
         if not distribution is None: n.distribution = distribution.name
         self.connectSockets(((color, n.inputs[0]), (roughness, n.inputs[1]), (normal, n.inputs[2])))
@@ -148,7 +158,8 @@ class ShaderNodesBuilder:
         self.connectSockets(((shader1, n.inputs[0]), (shader2, n.inputs[1])))
         return n.outputs[0]
 
-    def newNormalMap(self, name=None, label=None, location=None, space=None, uvMapName=None, strength=None, normal=None):
+    def newNormalMap(self, name=None, label=None, location=None, space=None, uvMapName=None, strength=None,
+                     normal=None):
         n = self.newNode(bpy.types.ShaderNodeNormalMap, name, label, location)
         if not space is None: n.space = space.name
         if not uvMapName is None: n.uv_map = uvMapName
@@ -158,14 +169,14 @@ class ShaderNodesBuilder:
     def newSeparateRgb(self, name=None, label=None, location=None, color=None):
         n = self.newNode(bpy.types.ShaderNodeSeparateRGB, name, label, location)
         self.connectSockets([(color, n.inputs[0])])
-        return (n.outputs[0], n.outputs[1], n.outputs[2]) # rgb
+        return (n.outputs[0], n.outputs[1], n.outputs[2])  # rgb
 
     def newImageTexture(self, name=None, label=None, location=None, space=None, image=None):
         n = self.newNode(bpy.types.ShaderNodeTexImage, name, label, location)
         if not label is None: n.name = label
         if not space is None: n.color_space = space.name
         if not image is None: n.image = image
-        return (n.outputs[0], n.outputs[1]) # color + alpha
+        return (n.outputs[0], n.outputs[1])  # color + alpha
 
     def newRgbValue(self, name=None, label=None, location=None, default=None):
         n = self.newNode(bpy.types.ShaderNodeRGB, name, label, location)
@@ -197,7 +208,7 @@ class ShaderNodesBuilder:
 
         # prune, beginning with the first non-matching socket and add missing sockets after that according to spec
         while (unmatched < len(treeSockets)):
-            treeSockets.remove(treeSockets[len(treeSockets)-1])
+            treeSockets.remove(treeSockets[len(treeSockets) - 1])
         for spec in socketSpecs[unmatched:]:
             treeSockets.new(blId(spec.type), spec.name)
 
@@ -217,12 +228,15 @@ class ShaderNodesBuilder:
         if not max is None: input.max_value = max
         return input
 
-    def newColorInput(self, label, default=(0.8, 0.8, 0.8, 1.0)): # default Blender near-white
+    def newColorInput(self, label, default=(0.8, 0.8, 0.8, 1.0)):  # default Blender near-white
         input = self.tree.inputs.new(blId(bpy.types.NodeSocketColor), label)
         if not default is None: input.default_value = default
         return input
 
+
 DX11_NAME = 'SpaceEngineers_DX11_Shader_2'
+
+
 # DX9_NAME = 'SpaceEngineers_DX9_Shader'
 
 def createDx11ShaderGroup():
@@ -236,11 +250,11 @@ def createDx11ShaderGroup():
 
     socketSpecs = [
         # ColorMetalTexture
-        SocketSpec(bpy.types.NodeSocketColor,         "Base Color Map", (0.8, 0.8, 0.8, 1.0)),
+        SocketSpec(bpy.types.NodeSocketColor, "Base Color Map", (0.8, 0.8, 0.8, 1.0)),
         SocketSpec(bpy.types.NodeSocketFloatUnsigned, "Metalness Map", 0.0, 0.0, 1.0),
 
         # NormalGlossTexture
-        SocketSpec(bpy.types.NodeSocketColor,         "Normal Map", (0.5, 0.5, 1.0, 1.0)), # straight up
+        SocketSpec(bpy.types.NodeSocketColor, "Normal Map", (0.5, 0.5, 1.0, 1.0)),  # straight up
         SocketSpec(bpy.types.NodeSocketFloatUnsigned, "Normal Map Strength", 1.5, 0.0, 10.0),
         SocketSpec(bpy.types.NodeSocketFloatUnsigned, "Glossiness Map", 0.0, 0.0, 1.0),
         SocketSpec(bpy.types.NodeSocketFloatUnsigned, "IOR", 1.450, 0.0, 1000.0),
@@ -252,10 +266,10 @@ def createDx11ShaderGroup():
         SocketSpec(bpy.types.NodeSocketFloatUnsigned, "Emissivity Map", 0.0, 0.0, 1.0),
         SocketSpec(bpy.types.NodeSocketFloatUnsigned, "Emissive Strength", 1.0, 0.0, 100.0),
         SocketSpec(bpy.types.NodeSocketFloatUnsigned, "Emissive Color Override", 0.0, 0.0, 1.0),
-        SocketSpec(bpy.types.NodeSocketColor,         "Emissive Color", (0.0, 1.0, 0.0, 1.0)),
+        SocketSpec(bpy.types.NodeSocketColor, "Emissive Color", (0.0, 1.0, 0.0, 1.0)),
 
         SocketSpec(bpy.types.NodeSocketFloatUnsigned, "Coloring Mask", 0.0, 0.0, 1.0),
-        SocketSpec(bpy.types.NodeSocketColor,         "Recolor", (0.8, 0.8, 0.8, 1.0)),
+        SocketSpec(bpy.types.NodeSocketColor, "Recolor", (0.8, 0.8, 0.8, 1.0)),
     ]
     builder.newTreeSockets(socketSpecs, False, (-400, 0))
 
@@ -514,7 +528,7 @@ def createDx11ShaderGroup():
     n.blend_type = 'MIX'
     builder.connect(n.inputs[0], n29.outputs[0])
     builder.connect(n.inputs[1], n27.outputs[0])
-    builder.connect(n.inputs[2], (1.000,1.000,1.000,1.000))
+    builder.connect(n.inputs[2], (1.000, 1.000, 1.000, 1.000))
 
     n31 = n = builder.newNode(bpy.types.ShaderNodeBsdfGlossy, name='MetallicGlossyBSDF')
     nodes.add(n)
@@ -540,7 +554,7 @@ def createDx11ShaderGroup():
     n.location = (-200.000, -200.000)
     n.width = 150.000
     n.distribution = 'ASHIKHMIN_SHIRLEY'
-    builder.connect(n.inputs[0], (0.800,0.800,0.800,1.000))
+    builder.connect(n.inputs[0], (0.800, 0.800, 0.800, 1.000))
     builder.connect(n.inputs[1], n15.outputs[0])
     builder.connect(n.inputs[2], n19.outputs[0])
 
@@ -584,41 +598,46 @@ def createDx11ShaderGroup():
 
     pbr.use_fake_user = True
 
+
 def getDx11Shader(create=True):
     nodeTrees = (tree for tree in bpy.data.node_groups if tree.name.startswith(DX11_NAME))
     try:
-        return max(nodeTrees, key=lambda t: t.name) # get the latest version
+        return max(nodeTrees, key=lambda t: t.name)  # get the latest version
     except ValueError:
         if not create:
             return None
         createDx11ShaderGroup()
         return getDx11Shader()
 
+
 def getDx11ShaderGroup(tree: bpy.types.ShaderNodeTree):
     return firstMatching(tree.nodes, bpy.types.ShaderNodeGroup, "DX11Shader")
 
+
 # def getDx9ShaderGroup(tree: bpy.types.ShaderNodeTree):
-    # return firstMatching(tree.nodes, bpy.types.ShaderNodeGroup, "DX9Shader")
+# return firstMatching(tree.nodes, bpy.types.ShaderNodeGroup, "DX9Shader")
 
 def createMaterialNodeTree(tree: bpy.types.ShaderNodeTree):
     builder = ShaderNodesBuilder(tree, defaultCreate=CreateMode.REUSE)
+
     # tree.nodes.clear()
 
     def label1(type):
         return type.name + "Texture"
+
     def label2(type):
         return type.name + "2Texture"
 
-    cmC, _     = builder.newImageTexture(None, label1(TextureType.ColorMetal),  (-200, 300), ImageColorspace.COLOR)
-    _, cmA     = builder.newImageTexture(None, label2(TextureType.ColorMetal),  (-200, 250), ImageColorspace.COLOR)
-    ngC, _     = builder.newImageTexture(None, label1(TextureType.NormalGloss), (-200, 200), ImageColorspace.NONE)
-    _, ngA     = builder.newImageTexture(None, label2(TextureType.NormalGloss), (-200, 150), ImageColorspace.NONE)
-    addC, _    = builder.newImageTexture(None, label1(TextureType.AddMaps),     (-200, 100), ImageColorspace.NONE)
-    _, addA    = builder.newImageTexture(None, label2(TextureType.AddMaps),     (-200, 50), ImageColorspace.NONE)
-    alphaC, _  = builder.newImageTexture(None, label1(TextureType.Alphamask),   (-200, 0), ImageColorspace.NONE)
+    cmC, _ = builder.newImageTexture(None, label1(TextureType.ColorMetal), (-200, 300), ImageColorspace.COLOR)
+    _, cmA = builder.newImageTexture(None, label2(TextureType.ColorMetal), (-200, 250), ImageColorspace.COLOR)
+    ngC, _ = builder.newImageTexture(None, label1(TextureType.NormalGloss), (-200, 200), ImageColorspace.NONE)
+    _, ngA = builder.newImageTexture(None, label2(TextureType.NormalGloss), (-200, 150), ImageColorspace.NONE)
+    addC, _ = builder.newImageTexture(None, label1(TextureType.AddMaps), (-200, 100), ImageColorspace.NONE)
+    _, addA = builder.newImageTexture(None, label2(TextureType.AddMaps), (-200, 50), ImageColorspace.NONE)
+    alphaC, _ = builder.newImageTexture(None, label1(TextureType.Alphamask), (-200, 0), ImageColorspace.NONE)
 
     addR, addG, _ = builder.newSeparateRgb(None, "Split AddMaps", (0, 100), addC)
-    addR.node.inputs[0].default_value = (1, 0, 0, 1) # R: no AO, G: no emissivity, B and A unused
+    addR.node.inputs[0].default_value = (1, 0, 0, 1)  # R: no AO, G: no emissivity, B and A unused
 
     dx11 = builder.newNode(bpy.types.ShaderNodeGroup, "DX11Shader", None, (250, 300), create=CreateMode.REPLACE)
     dx11.node_tree = getDx11Shader()
@@ -649,8 +668,10 @@ def createMaterialNodeTree(tree: bpy.types.ShaderNodeTree):
             and not any(output for output in diffuseShader.outputs if len(output.links) > 0):
         tree.nodes.remove(diffuseShader)
 
+
 def register():
     pass
+
 
 def unregister():
     pass

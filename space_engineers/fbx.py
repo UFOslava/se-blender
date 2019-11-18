@@ -5,6 +5,7 @@ import bpy
 
 _experimental = (bpy.app.version[0] == 2 and bpy.app.version[1] == 72)
 
+
 def _clone_fbx_module():
     import sys
     from importlib.util import find_spec
@@ -21,15 +22,17 @@ def _clone_fbx_module():
             if sys.modules.get(NAME, None):
                 del sys.modules[NAME]
 
+
 _fbx = _clone_fbx_module()
 
 _original_fbx_template_def_model = _fbx.fbx_template_def_model
+
 
 # extend fbx_template_def_model with further known properties by using the overrides
 def fbx_template_def_model(scene, settings, override_defaults=None, nbr_users=0):
     props = OrderedDict((
         # Name,   Value, Type, Animatable
-        
+
         # SE properties
         (b"file", ("", "p_string", False)),
         (b"highlight", ("", "p_string", False)),
@@ -43,14 +46,17 @@ def fbx_template_def_model(scene, settings, override_defaults=None, nbr_users=0)
         (b"shapeType", ("", "p_string", False)),
     ))
     if override_defaults is not None:
-        props.update(override_defaults)        
+        props.update(override_defaults)
     return _original_fbx_template_def_model(scene, settings, props, nbr_users)
+
 
 _fbx.fbx_template_def_model = fbx_template_def_model
 
+
 def check_skip_material(mat):
     """Simple helper to check whether we actually support exporting that material or not"""
-    return mat.type not in {'SURFACE'} # or mat.use_nodes
+    return mat.type not in {'SURFACE'}  # or mat.use_nodes
+
 
 _fbx.check_skip_material = check_skip_material
 
@@ -61,8 +67,9 @@ HAVOK_SHAPE_NAMES = {
     'CYLINDER': 'Cylinder',
     'CAPSULE': 'Capsule',
     'MESH': 'Mesh',
-    'CONE': 'Hull', # not supported by Havok
+    'CONE': 'Hull',  # not supported by Havok
 }
+
 
 # no easy way to extend, so copied from export_fbx_bin.py and modified
 def fbx_data_object_elements(root, ob_obj, scene_data):
@@ -135,7 +142,7 @@ def fbx_data_object_elements(root, ob_obj, scene_data):
         _fbx.elem_props_template_set(tmpl, props, "p_bool", b"ViewFrustum", True)
         _fbx.elem_props_template_set(tmpl, props, "p_enum", b"BackgroundMode", 0)  # Don't know what it means
         _fbx.elem_props_template_set(tmpl, props, "p_bool", b"ForegroundTransparent", True)
-        
+
     # ----------------------- CUSTOM PART BEGINS HERE ----------------------- #
 
     if obj_type == b"Null" and types.data(ob_obj.bdata):
@@ -160,16 +167,19 @@ def fbx_data_object_elements(root, ob_obj, scene_data):
 
     _fbx.elem_props_template_finalize(tmpl, props)
 
+
 _fbx.fbx_data_object_elements = fbx_data_object_elements
+
 
 def shouldScaleDownEmpty(empty):
     settings = exportSettings()
     return not settings is None and settings.scaleDown and (
-               (empty.empty_draw_size == 0.5 and empty.empty_draw_type == 'CUBE') or
-               (data(empty).scaleDown)
+            (empty.empty_draw_size == 0.5 and empty.empty_draw_type == 'CUBE') or
+            (data(empty).scaleDown)
     )
 
-# export these two functions as our own so that clients of this module don't have to depend on 
+
+# export these two functions as our own so that clients of this module don't have to depend on
 # the cloned fbx_experimental.export_fbx_bin module
 save_single = _fbx.save_single
 save = _fbx.save
