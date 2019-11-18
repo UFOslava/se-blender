@@ -1,19 +1,20 @@
 bl_info = {
     "name": "Block Tools",
-	"description": "Tools to construct in-game blocks for the game Space Engineers",
-	"author": "V0.8+ by Balmung - Original by Harag (up to 0.7.0)",
-	"version": (0, 9, 1),
+    "description": "Tools to construct in-game blocks for the game Space Engineers",
+    "author": "V0.8+ by Balmung - Original by Harag (up to 0.7.0)",
+    "version": (0, 9, 1),
     "blender": (2, 72, 0),
-	"location": "Properties > Scene, Material, Empty | Tools > Create | Node Editor",
+    "location": "Properties > Scene, Material, Empty | Tools > Create | Node Editor",
     "warning": "\"Game Directory\" setting is changed to \"Converted SE Textures\" at \"Advanced Options\"",
-	"wiki_url": "http://hotohori.github.io/se-blender/",
-	"tracker_url": "https://github.com/Hotohori/se-blender/issues",
+    "wiki_url": "http://hotohori.github.io/se-blender/",
+    "tracker_url": "https://github.com/Hotohori/se-blender/issues",
     "category": "Space Engineers"
 }
 
 # properly handle Blender F8 reload
 
 modules = locals()
+
 
 def reload(module_name):
     import importlib
@@ -22,6 +23,7 @@ def reload(module_name):
         return True
     except KeyError:
         return False
+
 
 if not reload('utils'): from . import utils
 if not reload('mirroring'): from . import mirroring
@@ -44,6 +46,7 @@ del modules
 # register data & UI classes
 
 import bpy
+
 
 class SEView3DToolsPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
@@ -76,11 +79,13 @@ class SEView3DToolsPanel(bpy.types.Panel):
             row.alignment = 'CENTER'
             row.label("Mark the scene as a block.", icon="INFO")
 
+
 def menu_func_export(self, context):
     self.layout.operator(operators.ExportSceneAsBlock.bl_idname,
                          text="Space Engineers Block (.mwm)")
     self.layout.operator(operators.UpdateDefinitionsFromBlockScene.bl_idname,
                          text="Space Engineers Definition Update (.sbc)")
+
 
 def register():
     from bpy.utils import register_class
@@ -91,7 +96,7 @@ def register():
     register_class(types.SESceneProperties)
     register_class(types.SEObjectProperties)
     register_class(types.SEMaterialProperties)
-   
+
     bpy.types.Object.space_engineers = bpy.props.PointerProperty(type=types.SEObjectProperties)
     bpy.types.Object.space_engineers_mirroring = mirroring.mirroringProperty
     bpy.types.Scene.space_engineers = bpy.props.PointerProperty(type=types.SESceneProperties)
@@ -105,7 +110,7 @@ def register():
 
     types.register()
     pbr_node_group.register()
-    
+
     addon_updater_ops.register(bl_info)
 
     operators.register()
@@ -145,11 +150,10 @@ def unregister():
     del bpy.types.Object.space_engineers
     del bpy.types.Object.space_engineers_mirroring
     del bpy.types.Scene.space_engineers
-    
+
     unregister_class(types.SEMaterialProperties)
     unregister_class(types.SEObjectProperties)
     unregister_class(types.SESceneProperties)
     unregister_class(types.SEAddonPreferences)
 
     unregister_class(utils.MessageOperator)
-

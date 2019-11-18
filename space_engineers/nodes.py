@@ -12,19 +12,19 @@ from .mirroring import mirroringAxisFromObjectName
 from .texture_files import TextureType
 from .types import sceneData, data, SEMaterialInfo
 from .utils import layer_bits, layer_bit, scene, first, PinnedScene, reportMessage, exportSettings
-from .export import ExportSettings, export_fbx, fbx_to_hkt, hkt_filter, write_pretty_xml, mwmbuilder, generateBlockDefXml
+from .export import ExportSettings, export_fbx, fbx_to_hkt, hkt_filter, write_pretty_xml, mwmbuilder, \
+    generateBlockDefXml
 from .mwmbuilder import material_xml, materialref_xml, mwmbuilder_xml, lod_xml
 
-
-COLOR_OBJECTS_SKT  = (.50, .65, .80, 1)
-COLOR_OBJECTS_WND  = (.45, .54, .61)
-COLOR_TEXT_SKT     = (.90, .90, .90, 1)
-COLOR_TEXT_WND     = (.66, .66, .66)
-COLOR_HKT_SKT      = (.60, .90, .40, 1)
-COLOR_HKT_WND      = (.55, .69, .50)
-COLOR_MWM_SKT      = (  1, .70, .30, 1)
-COLOR_MWM_WND      = (.70, .56, .42)
-COLOR_BLOCKDEF_WND = (  1, .98, .52)
+COLOR_OBJECTS_SKT = (.50, .65, .80, 1)
+COLOR_OBJECTS_WND = (.45, .54, .61)
+COLOR_TEXT_SKT = (.90, .90, .90, 1)
+COLOR_TEXT_WND = (.66, .66, .66)
+COLOR_HKT_SKT = (.60, .90, .40, 1)
+COLOR_HKT_WND = (.55, .69, .50)
+COLOR_MWM_SKT = (1, .70, .30, 1)
+COLOR_MWM_WND = (.70, .56, .42)
+COLOR_BLOCKDEF_WND = (1, .98, .52)
 
 DEFAULT_OBJECT_TYPES = {'EMPTY', 'MESH'}
 OTHER = 'OTHER'
@@ -32,6 +32,7 @@ OTHER_TYPES = {'OTHER'}
 MESH_LIKE_TYPES = {'CURVE', 'SURFACE', 'FONT', 'META'}
 
 ACCEPTABLE_OUTCOME = {'SUCCESS', 'PROBLEMS'}
+
 
 class BlockExportTree(bpy.types.NodeTree):
     bl_idname = "SEBlockExportTree"
@@ -42,6 +43,7 @@ class BlockExportTree(bpy.types.NodeTree):
     def getAllMwmObjects(self):
         return chain.from_iterable((n.inputs['Objects'].getObjects() for n in self.nodes if isinstance(n, MwmFileNode)))
 
+
 class ObjectSource:
     '''
         Enumerates scene-objects for a requesting socket
@@ -49,6 +51,7 @@ class ObjectSource:
 
     def getObjects(self, socket: bpy.types.NodeSocket):
         return []
+
 
 class ParamSource:
     '''
@@ -58,6 +61,7 @@ class ParamSource:
     def getParams(self) -> dict:
         return {}
 
+
 class TextSource:
     '''
         Provides a string that can have parameters substituted.
@@ -65,6 +69,7 @@ class TextSource:
 
     def getText(self, *args, **params) -> str:
         return ""
+
 
 class Exporter:
     '''
@@ -74,14 +79,17 @@ class Exporter:
     def export(self, exportContext):
         raise NotImplementedError("No export implemented")
 
+
 class ReadyState:
 
     def isReady(self):
         return True
 
+
 class Upgradable:
     def upgrade(self, tree):
         pass
+
 
 # -------------------------------------------------------------------------------------------------------------------- #
 
@@ -135,6 +143,7 @@ class SESocket:
                         and (type is None or isinstance(link.from_socket, type)):
                     return link.to_socket
         return None
+
 
 class TextSocket(SESocket, TextSource):
     type = "STRING"
@@ -200,6 +209,7 @@ class TextSocket(SESocket, TextSource):
 
         super().drawChecked(context, layout, node, text, source)
 
+
 class ExportSocket(SESocket, Exporter):
     def export(self, settings: ExportSettings):
         '''Delegates the export to a linked source-socket if this is an input-socket
@@ -218,11 +228,12 @@ class ExportSocket(SESocket, Exporter):
 
         return source.export(settings)
 
+
 class ObjectsSocket(SESocket, ObjectSource, ParamSource, ReadyState):
     n = bpy.props.IntProperty(default=-1)
     layer = bpy.props.IntProperty()
 
-    def getObjects(self, socket: bpy.types.NodeSocket=None):
+    def getObjects(self, socket: bpy.types.NodeSocket = None):
         if not self.enabled:
             return []
 
@@ -263,9 +274,10 @@ class ObjectsSocket(SESocket, ObjectSource, ParamSource, ReadyState):
             color = (0.35, 0.35, 0.35, 1)
         return color
 
+
 class FileSocket(TextSocket, ReadyState):
     def isCompatibleSource(self, socket):
-        return isinstance(socket, type(self)) # or isinstance(socket, TemplateStringSocket)
+        return isinstance(socket, type(self))  # or isinstance(socket, TemplateStringSocket)
 
     def isReady(self):
         if self.is_output:
@@ -286,6 +298,7 @@ class FileSocket(TextSocket, ReadyState):
             # color = (r, g, b, a * 0.2)
         return color
 
+
 # -------------------------------------------------------------------------------------------------------------------- #
 
 class TemplateStringSocket(bpy.types.NodeSocket, TextSocket):
@@ -298,10 +311,12 @@ class TemplateStringSocket(bpy.types.NodeSocket, TextSocket):
     def isCompatibleSource(self, socket):
         return isinstance(socket, TextSocket)
 
+
 class MwmFileSocket(bpy.types.NodeSocket, FileSocket, ExportSocket):
     bl_idname = "SEMwmFileSocket"
     bl_label = ".mwm"
     bl_color = COLOR_MWM_SKT
+
 
 # according to VRageRender.MyRenderModel.LoadData()
 RENDER_QUALITIES = [
@@ -310,6 +325,7 @@ RENDER_QUALITIES = [
     ('HIGH', 'High', 'High'),
     ('EXTREME', 'Extr', 'Extreme'),
 ]
+
 
 class LodInputSocket(bpy.types.NodeSocket, FileSocket, ExportSocket):
     bl_idname = "SELodInputSocket"
@@ -344,18 +360,21 @@ class LodInputSocket(bpy.types.NodeSocket, FileSocket, ExportSocket):
         super().drawChecked(context, layout, node, text, source)
 
     def isCompatibleSource(self, socket):
-        return isinstance(socket, MwmFileSocket) # or isinstance(socket, TemplateStringSocket)
+        return isinstance(socket, MwmFileSocket)  # or isinstance(socket, TemplateStringSocket)
+
 
 class HktFileSocket(bpy.types.NodeSocket, FileSocket, ExportSocket):
     bl_idname = "SEHktFileSocket"
     bl_label = ".hkt"
     bl_color = COLOR_HKT_SKT
 
+
 class ObjectListSocket(bpy.types.NodeSocket, ObjectsSocket):
     bl_idname = "SEObjectListSocket"
     bl_label = "Objects"
     bl_color = COLOR_OBJECTS_SKT
     type = 'CUSTOM'
+
 
 class RigidBodyObjectsSocket(bpy.types.NodeSocket, ObjectsSocket):
     '''selects only objects that have rigid-body settings'''
@@ -364,8 +383,9 @@ class RigidBodyObjectsSocket(bpy.types.NodeSocket, ObjectsSocket):
     bl_color = COLOR_OBJECTS_SKT
     type = 'CUSTOM'
 
-    def getObjects(self, socket: bpy.types.NodeSocket=None):
+    def getObjects(self, socket: bpy.types.NodeSocket = None):
         return (o for o in super().getObjects(socket) if o.type == 'MESH' and not o.rigid_body is None)
+
 
 class ExportableObjectsSocket(bpy.types.NodeSocket, ObjectsSocket):
     '''selects only objects that are of an exportable type'''
@@ -374,12 +394,13 @@ class ExportableObjectsSocket(bpy.types.NodeSocket, ObjectsSocket):
     bl_color = COLOR_OBJECTS_SKT
     type = 'CUSTOM'
 
-    def getObjects(self, socket: bpy.types.NodeSocket=None):
+    def getObjects(self, socket: bpy.types.NodeSocket = None):
         object_types = getattr(self.node, 'object_types', DEFAULT_OBJECT_TYPES)
         if OTHER in object_types:
             object_types = (object_types - OTHER_TYPES) | MESH_LIKE_TYPES
 
         return (o for o in super().getObjects(socket) if o.type in object_types)
+
 
 class MountPointObjectsSocket(bpy.types.NodeSocket, ObjectsSocket):
     '''selects only objects that have a 'MountPoint' material'''
@@ -388,8 +409,9 @@ class MountPointObjectsSocket(bpy.types.NodeSocket, ObjectsSocket):
     bl_color = COLOR_OBJECTS_SKT
     type = 'CUSTOM'
 
-    def getObjects(self, socket: bpy.types.NodeSocket=None):
+    def getObjects(self, socket: bpy.types.NodeSocket = None):
         return (o for o in super().getObjects(socket) if 'MountPoint' in o.material_slots)
+
 
 class MirroringObjectsSocket(bpy.types.NodeSocket, ObjectsSocket):
     '''selects only objects that are name 'Mirror(ing)...' '''
@@ -398,8 +420,9 @@ class MirroringObjectsSocket(bpy.types.NodeSocket, ObjectsSocket):
     bl_color = COLOR_OBJECTS_SKT
     type = 'CUSTOM'
 
-    def getObjects(self, socket: bpy.types.NodeSocket=None):
+    def getObjects(self, socket: bpy.types.NodeSocket = None):
         return (o for o in super().getObjects(socket) if not mirroringAxisFromObjectName(o) is None)
+
 
 # -------------------------------------------------------------------------------------------------------------------- #
 
@@ -407,6 +430,7 @@ class SENode:
     @classmethod
     def poll(cls, tree):
         return tree.bl_idname == BlockExportTree.bl_idname
+
 
 class TemplateStringNode(bpy.types.Node, SENode):
     bl_idname = "SETemplateStringNode"
@@ -421,6 +445,7 @@ class TemplateStringNode(bpy.types.Node, SENode):
     def draw_buttons(self, context, layout):
         if len(self.outputs) > 0:
             layout.prop(self.outputs['Text'], "text", text="")
+
 
 class HavokFileNode(bpy.types.Node, SENode, Exporter, ReadyState):
     bl_idname = "SEHavokFileNode"
@@ -475,10 +500,12 @@ class HavokFileNode(bpy.types.Node, SENode, Exporter, ReadyState):
         return settings.cacheValue(hktfile, 'SUCCESS')
 
 
-IOFBXOrientationHelper = orientation_helper_factory("IOFBXOrientationHelper", axis_forward='Z', axis_up='Y') # SE; -Z, Y
+IOFBXOrientationHelper = orientation_helper_factory("IOFBXOrientationHelper", axis_forward='Z',
+                                                    axis_up='Y')  # SE; -Z, Y
+
 
 # as defined by io_scene_fbx/__init__.py/ExportFBX, can't reuse because the class is a bpy.types.Operator
-class FbxExportProperties (bpy.types.PropertyGroup, IOFBXOrientationHelper):
+class FbxExportProperties(bpy.types.PropertyGroup, IOFBXOrientationHelper):
     version = EnumProperty(
         items=(('BIN7400', "FBX 7.4 binary", "Modern 7.4 binary version"),
                ('ASCII6100', "FBX 6.1 ASCII",
@@ -486,7 +513,7 @@ class FbxExportProperties (bpy.types.PropertyGroup, IOFBXOrientationHelper):
                ),
         name="Version",
         description="Choose which version of the exporter to use",
-        default='BIN7400' # SE
+        default='BIN7400'  # SE
     )
 
     # 7.4 only
@@ -496,7 +523,7 @@ class FbxExportProperties (bpy.types.PropertyGroup, IOFBXOrientationHelper):
                ('ARMATURE', "Armatures", "Armature-related settings"),
                ('ANIMATION', "Animation", "Animation-related settings"),
                ),
-        options={'SKIP_SAVE'}, # SE
+        options={'SKIP_SAVE'},  # SE
         name="ui_tab",
         description="Export options categories"
     )
@@ -519,7 +546,7 @@ class FbxExportProperties (bpy.types.PropertyGroup, IOFBXOrientationHelper):
         name="Apply Unit",
         description="Scale all data according to current Blender size, to match default FBX unit "
                     "(centimeter, some importers do not handle UnitScaleFactor properly)",
-        default=False # SE ; True
+        default=False  # SE ; True
     )
     # 7.4 only
     bake_space_transform = BoolProperty(
@@ -533,15 +560,16 @@ class FbxExportProperties (bpy.types.PropertyGroup, IOFBXOrientationHelper):
     object_types = EnumProperty(
         name="Object Types",
         options={'ENUM_FLAG'},
-        items=(('EMPTY', "Empty", ""), # 'OUTLINER_OB_EMPTY'
-               ('CAMERA', "Camera", ""), # 'OUTLINER_OB_CAMERA'
-               ('LAMP', "Lamp", ""), # 'OUTLINER_OB_LAMP'
-               ('ARMATURE', "Armature", "WARNING: not supported in dupli/group instances"), # 'OUTLINER_OB_ARMATURE'
-               ('MESH', "Mesh", ""), # 'OUTLINER_OB_MESH'
-               ('OTHER', "Other", "Other geometry types, like curve, metaball, etc. (converted to meshes)"), # 'MOD_REMESH'
+        items=(('EMPTY', "Empty", ""),  # 'OUTLINER_OB_EMPTY'
+               ('CAMERA', "Camera", ""),  # 'OUTLINER_OB_CAMERA'
+               ('LAMP', "Lamp", ""),  # 'OUTLINER_OB_LAMP'
+               ('ARMATURE', "Armature", "WARNING: not supported in dupli/group instances"),  # 'OUTLINER_OB_ARMATURE'
+               ('MESH', "Mesh", ""),  # 'OUTLINER_OB_MESH'
+               ('OTHER', "Other", "Other geometry types, like curve, metaball, etc. (converted to meshes)"),
+               # 'MOD_REMESH'
                ),
         description="Which kind of object to export",
-        default={'EMPTY', 'MESH' } # SE ; {'EMPTY', 'CAMERA', 'LAMP', 'ARMATURE', 'MESH', 'OTHER' }
+        default={'EMPTY', 'MESH'}  # SE ; {'EMPTY', 'CAMERA', 'LAMP', 'ARMATURE', 'MESH', 'OTHER' }
     )
 
     use_mesh_modifiers = BoolProperty(
@@ -593,7 +621,7 @@ class FbxExportProperties (bpy.types.PropertyGroup, IOFBXOrientationHelper):
                ('-Y', "-Y Axis", ""),
                ('-Z', "-Z Axis", ""),
                ),
-        default='X' # SE ; X
+        default='X'  # SE ; X
     )
     secondary_bone_axis = EnumProperty(
         name="Secondary Bone Axis",
@@ -604,7 +632,7 @@ class FbxExportProperties (bpy.types.PropertyGroup, IOFBXOrientationHelper):
                ('-Y', "-Y Axis", ""),
                ('-Z', "-Z Axis", ""),
                ),
-        default='Y' # SE ; X
+        default='Y'  # SE ; X
     )
     use_armature_deform_only = BoolProperty(
         name="Only Deform Bones",
@@ -626,7 +654,7 @@ class FbxExportProperties (bpy.types.PropertyGroup, IOFBXOrientationHelper):
     bake_anim = BoolProperty(
         name="Baked Animation",
         description="Export baked keyframe animation",
-        default=False # SE ; True
+        default=False  # SE ; True
     )
     bake_anim_use_all_bones = BoolProperty(
         name="Key All Bones",
@@ -670,7 +698,7 @@ class FbxExportProperties (bpy.types.PropertyGroup, IOFBXOrientationHelper):
     use_anim = BoolProperty(
         name="Animation",
         description="Export keyframe animation",
-        default=False # SE ; True
+        default=False  # SE ; True
     )
     use_anim_action_all = BoolProperty(
         name="All Actions",
@@ -709,7 +737,7 @@ class FbxExportProperties (bpy.types.PropertyGroup, IOFBXOrientationHelper):
                ('SCENE', "Scene", "Each scene as a file"),
                ('GROUP', "Group", "Each group as a file"),
                ),
-        default = 'OFF' # SE
+        default='OFF'  # SE
     )
     use_batch_own_dir = BoolProperty(
         name="Batch Own Dir",
@@ -722,17 +750,23 @@ class FbxExportProperties (bpy.types.PropertyGroup, IOFBXOrientationHelper):
         options={'HIDDEN'}
     )
 
+
 class MwmExportProperties(bpy.types.PropertyGroup):
     if bpy.app.version <= (2, 78, 0):
-        rescale_factor = bpy.props.FloatProperty(name="Rescale Factor", min=0.001, max=1000, soft_min=0.01, soft_max=10, default=1.0,
-            description="Instructs MwmBuilder to rescale everything by the given factor. Exporting a character seems to require a value 0.01. The armature must have the same scale.")
-        rotation_y = bpy.props.FloatProperty(name="Rotation Y", min=-1000, max=1000, soft_min=-360, soft_max=360, default=0,
-            description="Instructs MwmBuilder to rotate everything around the Y-axis. Exporting a character seems to require a value of 180°")
+        rescale_factor = bpy.props.FloatProperty(name="Rescale Factor", min=0.001, max=1000, soft_min=0.01, soft_max=10,
+                                                 default=1.0,
+                                                 description="Instructs MwmBuilder to rescale everything by the given factor. Exporting a character seems to require a value 0.01. The armature must have the same scale.")
+        rotation_y = bpy.props.FloatProperty(name="Rotation Y", min=-1000, max=1000, soft_min=-360, soft_max=360,
+                                             default=0,
+                                             description="Instructs MwmBuilder to rotate everything around the Y-axis. Exporting a character seems to require a value of 180°")
     else:
-        rescale_factor = bpy.props.FloatProperty(name="Rescale Factor", min=0.001, max=1000, soft_min=0.01, soft_max=10, default=0.01,
-            description="Instructs MwmBuilder to rescale everything by the given factor. Exporting a character seems to require a value 0.01. The armature must have the same scale.")
-        rotation_y = bpy.props.FloatProperty(name="Rotation Y", min=-1000, max=1000, soft_min=-360, soft_max=360, default=0,
-            description="Instructs MwmBuilder to rotate everything around the Y-axis. Exporting a character seems to require a value of 180°")
+        rescale_factor = bpy.props.FloatProperty(name="Rescale Factor", min=0.001, max=1000, soft_min=0.01, soft_max=10,
+                                                 default=0.01,
+                                                 description="Instructs MwmBuilder to rescale everything by the given factor. Exporting a character seems to require a value 0.01. The armature must have the same scale.")
+        rotation_y = bpy.props.FloatProperty(name="Rotation Y", min=-1000, max=1000, soft_min=-360, soft_max=360,
+                                             default=0,
+                                             description="Instructs MwmBuilder to rotate everything around the Y-axis. Exporting a character seems to require a value of 180°")
+
 
 class MwmFileNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradable):
     bl_idname = "SEMwmFileNode"
@@ -752,7 +786,7 @@ class MwmFileNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradable):
         self.inputs.new(HktFileSocket.bl_idname, "Havok")
         self.outputs.new(MwmFileSocket.bl_idname, "Mwm").node_input = "Name"
 
-        for i in range(1,11):
+        for i in range(1, 11):
             self.inputs.new(LodInputSocket.bl_idname, "LOD %d" % (i))
 
         self.use_custom_color = True
@@ -767,13 +801,13 @@ class MwmFileNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradable):
             if linkedSource:
                 tree.links.new(linkedSource, newSocket)
             self.inputs.remove(oldSocket)
-            self.inputs.move(len(self.inputs)-1, 1)
+            self.inputs.move(len(self.inputs) - 1, 1)
 
     def update(self):
         pins = [p for p in self.inputs.values() if p.name.startswith('LOD')]
 
-        for i in range(len(pins)-1, 0, -1):
-            pins[i].enabled = pins[i].is_linked or pins[i-1].is_linked
+        for i in range(len(pins) - 1, 0, -1):
+            pins[i].enabled = pins[i].is_linked or pins[i - 1].is_linked
             if (pins[i].enabled):
                 break
 
@@ -785,7 +819,6 @@ class MwmFileNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradable):
 
     def draw_buttons_ext(self, context, layout):
         f = self.fbx_settings
-
 
         m = self.mwm_settings
         layout.label("MwmBuilder Settings")
@@ -815,7 +848,7 @@ class MwmFileNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradable):
             layout.prop(f, "mesh_smooth_type")
             layout.prop(f, "use_mesh_edges")
             sub = layout.row()
-            #~ sub.enabled = f.mesh_smooth_type in {'OFF'}
+            # ~ sub.enabled = f.mesh_smooth_type in {'OFF'}
             sub.prop(f, "use_tspace")
         elif f.ui_tab == 'ARMATURE':
             layout.prop(f, "use_armature_deform_only")
@@ -835,7 +868,7 @@ class MwmFileNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradable):
             col.prop(f, "bake_anim_simplify_factor")
 
     def export(self, settings: ExportSettings):
-        _ = settings.hadErrors # reset error tracking
+        _ = settings.hadErrors  # reset error tracking
 
         name = self.inputs['Name'].getText(settings)
         if not name:
@@ -879,7 +912,6 @@ class MwmFileNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradable):
         for file in listdir(xmlrefpath):
             if '.xml' in file:
                 settings.matreffiles.append(join(xmlrefpath + file))
-        
 
         materials = {}
         for o in objectsSource.getObjects():
@@ -887,18 +919,20 @@ class MwmFileNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradable):
                 if not ms is None and not ms.material is None:
                     materials[ms.material.name] = ms.material
             if isinstance(o.data, bpy.types.Mesh) and len(o.data.uv_layers) == 0:
-                settings.error("Mesh-object '%s' has no UV-map. This will crash SE's DirectX 11 renderer." % o.name, file=mwmfile, node=self)
+                settings.error("Mesh-object '%s' has no UV-map. This will crash SE's DirectX 11 renderer." % o.name,
+                               file=mwmfile, node=self)
         materials_xml = [material_xml(settings, m, mwmfile, self) for m in materials.values()]
-        
+
         materials = {}
         for o in objectsSource.getObjects():
             for ms in o.material_slots:
                 if not ms is None and not ms.material is None:
-                    materials[ms.material.name] = ms.material        
+                    materials[ms.material.name] = ms.material
         materialsref_xml = [materialref_xml(settings, m, mwmfile, self) for m in materials.values()]
 
         paramsfile = join(settings.outputDir, name + ".xml")
-        paramsxml = mwmbuilder_xml(settings, materials_xml, materialsref_xml, lods_xml, self.mwm_settings.rescale_factor, self.mwm_settings.rotation_y)
+        paramsxml = mwmbuilder_xml(settings, materials_xml, materialsref_xml, lods_xml,
+                                   self.mwm_settings.rescale_factor, self.mwm_settings.rotation_y)
         write_pretty_xml(paramsxml, paramsfile)
 
         fbxfile = join(settings.outputDir, name + ".fbx")
@@ -917,10 +951,13 @@ class MwmFileNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradable):
             settings.warn("export completed with problems", file=mwmfile, node=self)
             return settings.cacheValue(mwmfile, 'PROBLEMS')
 
+
 PATTERN_NAME = re.compile(r"^(.*?)(\.\d+)?$")
+
 
 def object_basename(name: str) -> str:
     return PATTERN_NAME.match(name).group(1)
+
 
 class TextFilterNode:
     def updateIsMalformedRegeEx(self, context):
@@ -990,14 +1027,19 @@ class TextFilterNode:
         txt = self.pattern
         regex = None
         matcher = None
+
         def matchExact(text):
             return txt == text
+
         def matchAny(text):
             return True
+
         def matchNone(text):
             return False
+
         def matchRegEx(text):
             return bool(regex.search(text))
+
         def matchInverted(text):
             return not matcher(text)
 
@@ -1013,6 +1055,7 @@ class TextFilterNode:
             matcher = matchExact
 
         return matchInverted if self.use_inverted_match else matcher
+
 
 class GroupFilterObjectsNode(bpy.types.Node, SENode, TextFilterNode, ObjectSource):
     bl_idname = "SEGroupFilterObjectsNode"
@@ -1033,11 +1076,12 @@ class GroupFilterObjectsNode(bpy.types.Node, SENode, TextFilterNode, ObjectSourc
         objects = inSocket.getObjects() if inSocket.is_linked else scene().objects
         matcher = self.newMatcher()
         return (obj for obj in objects
-            if any(g for g in obj.users_group if matcher(g.name))
+                if any(g for g in obj.users_group if matcher(g.name))
                 or (self.use_inverted_match and len(obj.users_group) == 0))
 
     def getSearchSource(self):
         return (bpy.data, "groups")
+
 
 class NameFilterObjectsNode(bpy.types.Node, SENode, TextFilterNode, ObjectSource):
     bl_idname = "SENameFilterObjectsNode"
@@ -1062,6 +1106,7 @@ class NameFilterObjectsNode(bpy.types.Node, SENode, TextFilterNode, ObjectSource
     def getSearchSource(self):
         return (scene(), "objects")
 
+
 class BlockSizeFilterObjectsNode(bpy.types.Node, SENode, ObjectSource):
     bl_idname = "SEBlockSizeFilterObjectsNode"
     bl_label = "Block Size Filter"
@@ -1083,6 +1128,7 @@ class BlockSizeFilterObjectsNode(bpy.types.Node, SENode, ObjectSource):
         isSmall = (settings.CubeSize == 'Small') if settings else (data(scene()).block_size == 'SMALL')
         inSocket = self.inputs["Small Block Objects"] if isSmall else self.inputs["Large Block Objects"]
         return inSocket.getObjects() if inSocket.is_linked else scene().objects
+
 
 class LayerObjectsNode(bpy.types.Node, SENode, ObjectSource, Upgradable):
     bl_idname = "SELayerObjectsNode"
@@ -1116,6 +1162,7 @@ class LayerObjectsNode(bpy.types.Node, SENode, ObjectSource, Upgradable):
         objects = inputSocket.getObjects() if inputSocket.is_linked else scene().objects
         return (obj for obj in objects if (layer_bits(obj.layers) & mask) != 0)
 
+
 class SeparateLayerObjectsNode(bpy.types.Node, SENode, ObjectSource, Upgradable):
     bl_idname = "SESeparateLayerObjectsNode"
     bl_label = "Layer Splitter"
@@ -1130,15 +1177,15 @@ class SeparateLayerObjectsNode(bpy.types.Node, SENode, ObjectSource, Upgradable)
             pin.enabled = mask[i]
             if pin.enabled:
                 pin.n = ordinal
-                pin.name = "Layer %02d \u2192 %d" % (i+1, ordinal)
+                pin.name = "Layer %02d \u2192 %d" % (i + 1, ordinal)
                 ordinal += 1
 
     layer_mask = bpy.props.BoolVectorProperty(name="Layers", subtype='LAYER', size=20, default=([False] * 20),
                                               update=onLayerMaskUpdate)
 
     def init(self, context):
-        for i in range(0,20):
-            pin = self.outputs.new(ObjectListSocket.bl_idname, "Layer %02d" % (i+1))
+        for i in range(0, 20):
+            pin = self.outputs.new(ObjectListSocket.bl_idname, "Layer %02d" % (i + 1))
             pin.enabled = False
             pin.layer = i
         pin = self.inputs.new(ObjectListSocket.bl_idname, "Objects")
@@ -1162,6 +1209,7 @@ class SeparateLayerObjectsNode(bpy.types.Node, SENode, ObjectSource, Upgradable)
         objects = inputSocket.getObjects() if inputSocket.is_linked else scene().objects
         return (obj for obj in objects if (layer_bits(obj.layers) & mask) != 0)
 
+
 class BlockDefinitionNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradable):
     bl_idname = "SEBlockDefNode"
     bl_label = "Block Definition"
@@ -1175,7 +1223,7 @@ class BlockDefinitionNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradab
         inputs.new(MountPointObjectsSocket.bl_idname, "Mount Points")
         inputs.new(MirroringObjectsSocket.bl_idname, "Mirroring")
 
-        for i in range(1,11):
+        for i in range(1, 11):
             inputs.new(MwmFileSocket.bl_idname, "Constr. Phase %d" % (i))
 
         self.use_custom_color = True
@@ -1188,24 +1236,24 @@ class BlockDefinitionNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradab
         if inputs.get('Icon Path', None) is None:
             icon = inputs.new(TemplateStringSocket.bl_idname, "Icon Path")
             icon.text = "//Textures/Icons/${BlockPairName}"
-            inputs.move(len(inputs)-1, 1)
+            inputs.move(len(inputs) - 1, 1)
 
         # new in v0.5.0
         if inputs.get('Mirroring', None) is None:
             inputs.new(MirroringObjectsSocket.bl_idname, "Mirroring")
-            inputs.move(len(inputs)-1, 3)
+            inputs.move(len(inputs) - 1, 3)
 
     def update(self):
         pins = [p for p in self.inputs.values() if p.name.startswith('Constr')]
 
-        for i in range(len(pins)-1, 0, -1):
-            pins[i].enabled = pins[i].is_linked or pins[i-1].is_linked
+        for i in range(len(pins) - 1, 0, -1):
+            pins[i].enabled = pins[i].is_linked or pins[i - 1].is_linked
             if (pins[i].enabled):
                 break
 
     def isReady(self):
         name = self.inputs['Main Model'].getText()
-        return True and name # force bool result
+        return True and name  # force bool result
 
     def export(self, settings: ExportSettings):
         mainModel = self.inputs['Main Model']
@@ -1251,7 +1299,7 @@ class BlockDefinitionNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradab
 
         mirroringSocket = self.inputs['Mirroring']
 
-        constrModelFiles = [] # maybe stays empty
+        constrModelFiles = []  # maybe stays empty
         for i, socket in enumerate(s for s in self.inputs if s.name.startswith('Constr')):
             if socket.enabled and socket.is_linked:
                 constrName = socket.getText(settings)
@@ -1274,12 +1322,12 @@ class BlockDefinitionNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradab
         return settings.cacheValue(blockdeffilecontent, xml)
 
     def getMainObjects(self):
-         mwmMainFileSocket = self.inputs['Main Model'].firstSource(type=MwmFileSocket)
-         if mwmMainFileSocket is None:
-             raise ValueError('block-definition is not linked to a main model')
+        mwmMainFileSocket = self.inputs['Main Model'].firstSource(type=MwmFileSocket)
+        if mwmMainFileSocket is None:
+            raise ValueError('block-definition is not linked to a main model')
 
-         mwmMainObjectsSocket = mwmMainFileSocket.node.inputs['Objects']
-         return mwmMainObjectsSocket.getObjects()
+        mwmMainObjectsSocket = mwmMainFileSocket.node.inputs['Objects']
+        return mwmMainObjectsSocket.getObjects()
 
     def _getLayer(self, socket: SESocket):
         source = socket.firstSource(type=ObjectsSocket)
@@ -1287,7 +1335,7 @@ class BlockDefinitionNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradab
             return -1
         if not isinstance(source.node, LayerObjectsNode) and not isinstance(source.node):
             return -1
-        return next( (i for i, b in enumerate(source.node.layer_mask) if b), -1)
+        return next((i for i, b in enumerate(source.node.layer_mask) if b), -1)
 
     def getMountPointLayer(self):
         return self._getLayer(self.inputs['Mount Points'])
@@ -1295,13 +1343,15 @@ class BlockDefinitionNode(bpy.types.Node, SENode, Exporter, ReadyState, Upgradab
     def getMirroringLayer(self):
         return self._getLayer(self.inputs['Mirroring'])
 
+
 # -------------------------------------------------------------------------------------------------------------------- #
 
 def getBlockDef(nodeTree: bpy.types.NodeTree) -> BlockDefinitionNode:
-     blockDef = first(n for n in nodeTree.nodes if isinstance(n, BlockDefinitionNode))
-     if blockDef is None:
-         raise ValueError('export settings contain no block-definition')
-     return blockDef
+    blockDef = first(n for n in nodeTree.nodes if isinstance(n, BlockDefinitionNode))
+    if blockDef is None:
+        raise ValueError('export settings contain no block-definition')
+    return blockDef
+
 
 def getUsedMaterials(scene: bpy.types.Scene = None):
     materials = set()
@@ -1325,25 +1375,28 @@ def getUsedMaterials(scene: bpy.types.Scene = None):
 
     return materials
 
+
 # -------------------------------------------------------------------------------------------------------------------- #
 
 import nodeitems_utils
 from nodeitems_utils import NodeCategory, NodeItem
+
 
 class SENodeCategory(NodeCategory):
     @classmethod
     def poll(cls, context):
         return context.space_data.tree_type == BlockExportTree.bl_idname
 
+
 categories = [
-    SENodeCategory(BlockExportTree.bl_idname+"Filters", "Object Filters", items=[
+    SENodeCategory(BlockExportTree.bl_idname + "Filters", "Object Filters", items=[
         NodeItem(NameFilterObjectsNode.bl_idname, NameFilterObjectsNode.bl_label),
         NodeItem(GroupFilterObjectsNode.bl_idname, GroupFilterObjectsNode.bl_label),
         NodeItem(BlockSizeFilterObjectsNode.bl_idname, BlockSizeFilterObjectsNode.bl_label),
         NodeItem(LayerObjectsNode.bl_idname, LayerObjectsNode.bl_label),
         NodeItem(SeparateLayerObjectsNode.bl_idname, SeparateLayerObjectsNode.bl_label),
     ]),
-    SENodeCategory(BlockExportTree.bl_idname+"Exporters", "Block Export", items=[
+    SENodeCategory(BlockExportTree.bl_idname + "Exporters", "Block Export", items=[
         NodeItem(TemplateStringNode.bl_idname, TemplateStringNode.bl_label),
         NodeItem(MwmFileNode.bl_idname, MwmFileNode.bl_label),
         NodeItem(HavokFileNode.bl_idname, HavokFileNode.bl_label),
@@ -1378,6 +1431,7 @@ registered = [
     BlockDefinitionNode,
 ]
 
+
 # -------------------------------------------------------------------------------------------------------------------- #
 
 @bpy.app.handlers.persistent
@@ -1391,6 +1445,7 @@ def upgradeNodesAfterLoad(dummy):
 
 from bpy.utils import register_class, unregister_class
 
+
 def register():
     for c in registered:
         register_class(c)
@@ -1403,6 +1458,7 @@ def register():
     except KeyError:
         nodeitems_utils.unregister_node_categories("SE_BLOCK_EXPORT")
         nodeitems_utils.register_node_categories("SE_BLOCK_EXPORT", categories)
+
 
 def unregister():
     try:

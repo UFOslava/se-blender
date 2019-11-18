@@ -5,11 +5,13 @@ from xml.etree.ElementTree import Comment, ProcessingInstruction, QName, _escape
 import os
 import bpy
 
+
 class CommentableTreeBuilder(ET.TreeBuilder):
     def comment(self, data):
-       self.start(ET.Comment, {})
-       self.data(data)
-       self.end(ET.Comment)
+        self.start(ET.Comment, {})
+        self.data(data)
+        self.end(ET.Comment)
+
 
 # WTF?! ElementTree overrides the Python declaration of XMLParser with some optimized-C version.
 # Putting overriding methods on a class derived from that simply doesn't work.
@@ -24,14 +26,14 @@ class AttributeOrderPreservingParser:
             except ImportError:
                 raise ImportError(
                     "No module named expat; use SimpleXMLTreeBuilder instead"
-                    )
+                )
         parser = expat.ParserCreate(encoding, "}")
         if target is None:
             target = ET.TreeBuilder()
         self.parser = parser
         self.target = target
         self._error = expat.error
-        self._names = {} # name memo cache
+        self._names = {}  # name memo cache
         # main callbacks
         parser.DefaultHandlerExpand = self._default
         if hasattr(target, 'start'):
@@ -53,7 +55,7 @@ class AttributeOrderPreservingParser:
         try:
             self.version = "Expat %d.%d.%d" % expat.version_info
         except AttributeError:
-            pass # unknown
+            pass  # unknown
 
     def _raiseerror(self, value):
         err = ET.ParseError(value)
@@ -75,10 +77,10 @@ class AttributeOrderPreservingParser:
     def _start(self, tag, attr_list):
         fixname = self._fixname
         tag = fixname(tag)
-        attrib = OrderedDict() # <- this is the changed line
+        attrib = OrderedDict()  # <- this is the changed line
         if attr_list:
             for i in range(0, len(attr_list), 2):
-                attrib[fixname(attr_list[i])] = attr_list[i+1]
+                attrib[fixname(attr_list[i])] = attr_list[i + 1]
         return self.target.start(tag, attrib)
 
     def _end(self, tag):
@@ -99,14 +101,14 @@ class AttributeOrderPreservingParser:
                 err = expat.error(
                     "undefined entity %s: line %d, column %d" %
                     (text, self.parser.ErrorLineNumber,
-                    self.parser.ErrorColumnNumber)
-                    )
-                err.code = 11 # XML_ERROR_UNDEFINED_ENTITY
+                     self.parser.ErrorColumnNumber)
+                )
+                err.code = 11  # XML_ERROR_UNDEFINED_ENTITY
                 err.lineno = self.parser.ErrorLineNumber
                 err.offset = self.parser.ErrorColumnNumber
                 raise err
         elif prefix == "<" and text[:9] == "<!DOCTYPE":
-            self._doctype = [] # inside a doctype declaration
+            self._doctype = []  # inside a doctype declaration
         elif self._doctype is not None:
             # parse doctype contents
             if prefix == ">":
@@ -142,7 +144,7 @@ class AttributeOrderPreservingParser:
     def close(self):
         """Finish feeding data to parser and return element structure."""
         try:
-            self.parser.Parse("", 1) # end of data
+            self.parser.Parse("", 1)  # end of data
         except self._error as v:
             self._raiseerror(v)
         try:
@@ -155,6 +157,7 @@ class AttributeOrderPreservingParser:
             # get rid of circular references
             del self.parser
             del self.target
+
 
 # again, one line changed :(
 def _serialize_xml(write, elem, qnames, namespaces,
@@ -185,7 +188,7 @@ def _serialize_xml(write, elem, qnames, namespaces,
                         write(" xmlns%s=\"%s\"" % (
                             k,
                             _escape_attrib(v)
-                            ))
+                        ))
 
                 # below is the changed line. assuming attrib is an OrderedDict this will preserve attribute order
                 for k, v in elem.attrib.items():
@@ -209,19 +212,22 @@ def _serialize_xml(write, elem, qnames, namespaces,
     if elem.tail:
         write(_escape_cdata(elem.tail))
 
+
 def _serialize_xml_with_xml_decl(write, elem, qnames, namespaces,
-                               short_empty_elements, **kwargs):
+                                 short_empty_elements, **kwargs):
     # ElementTree is to dumb to honor the xml_declaration for other methods than 'xml' :(
     write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
     _serialize_xml(write, elem, qnames, namespaces, short_empty_elements, **kwargs)
 
+
 # At least we don't need to monkey-patch... Register as an additional serialization-method.
 ET._serialize['ordered-attribs'] = _serialize_xml_with_xml_decl
+
 
 class XmlEditor:
     def __init__(self, knownSubelements: list, indentLevel=0, indent="    ", base: ET.Element = None):
         self.knownElements = knownSubelements
-        self.knownElemPos = {name : pos for pos, name in enumerate(knownSubelements)}
+        self.knownElemPos = {name: pos for pos, name in enumerate(knownSubelements)}
         self.indentLevel = indentLevel
         self.indent = indent
 
@@ -236,12 +242,12 @@ class XmlEditor:
         # indentation
         if len(base) > 0:
             if index > 0:
-                result.tail = base[index-1].tail
-                base[index-1].tail = "\n" + (indent * (level+1))
+                result.tail = base[index - 1].tail
+                base[index - 1].tail = "\n" + (indent * (level + 1))
             else:
-                result.tail = "\n" + (indent * (level+1))
+                result.tail = "\n" + (indent * (level + 1))
         else:
-            base.text = "\n" + (indent * (level+1))
+            base.text = "\n" + (indent * (level + 1))
             result.tail = "\n" + (indent * level)
 
         base.insert(index, result)
@@ -279,17 +285,17 @@ class XmlEditor:
         insertBefore = None
 
         # which is the closest existing element with a known tagname?
-        for look in range(1, max(pos, numKnown-pos)):
+        for look in range(1, max(pos, numKnown - pos)):
             # inserting after a known element is preferred because this is less likely
             # to separate a comment from the element it belongs to
-            after = pos-look
+            after = pos - look
             if after >= 0:
                 pivot = self.find(base, self.knownElements[after])
                 if pivot != None:
                     insertBefore = False
                     break
 
-            before = pos+look
+            before = pos + look
             if before < numKnown:
                 pivot = self.find(base, self.knownElements[before])
                 if pivot != None:
@@ -300,7 +306,8 @@ class XmlEditor:
         if pivot == None:
             return self.newElement(base, len(base), tagName)
 
-        return self.newElement(base, pivot[0] if insertBefore else pivot[0]+1, tagName)
+        return self.newElement(base, pivot[0] if insertBefore else pivot[0] + 1, tagName)
+
 
 BLOCK_ELEMENTS = [
     'Id', 'DisplayName', 'Icon', 'CubeSize', 'BlockTopology', 'Size', 'ModelOffset', 'Model', 'UseModelIntersection',
@@ -313,10 +320,12 @@ ID_ELEMENTS = ['TypeId', 'SubtypeId']
 
 LIST_ELEMENTS = {'BuildProgressModels', 'MountPoints'}
 
+
 class MergeResult(Enum):
     MERGED = 1
     RENAMED = 2
     NOT_FOUND = 3
+
 
 class CubeBlocksMerger:
     def __init__(self, cubeBlocksPath: str, indent="    ", backup=True, allowRenames=False):
